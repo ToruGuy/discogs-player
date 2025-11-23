@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Play, Heart, ExternalLink, Pause, Disc, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { openExternalLink } from "@/lib/external-links";
 
 export function FocusView() {
   const { id } = useParams();
@@ -178,15 +179,12 @@ export function FocusView() {
                </div>
                 
                 <div className="pt-4">
-                     <Button variant="outline" className="w-full" asChild>
-                        <a 
-                            href={viewAlbum.release_url} 
-                            target="_blank" 
-                            rel="noreferrer"
-                            className="flex items-center gap-2"
-                        >
-                            View on Discogs <ExternalLink className="h-4 w-4" />
-                        </a>
+                     <Button 
+                        variant="outline" 
+                        className="w-full flex items-center gap-2"
+                        onClick={() => openExternalLink(viewAlbum.release_url)}
+                     >
+                        View on Discogs <ExternalLink className="h-4 w-4" />
                      </Button>
                 </div>
            </div>
@@ -252,17 +250,17 @@ export function FocusView() {
                                             <div className="flex-1 font-medium text-sm">
                                                 {video.title || `Video ${idx + 1}`}
                                             </div>
-                                            <div className="text-xs text-muted-foreground">
-                                                <a 
-                                                    href={video.youtube_url} 
-                                                    target="_blank" 
-                                                    rel="noopener noreferrer"
+                                            <div className="text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        openExternalLink(video.youtube_url);
+                                                    }}
                                                     className="hover:text-primary block p-2"
-                                                    onClick={(e) => e.stopPropagation()}
                                                     title="Watch on YouTube"
                                                 >
                                                     <ExternalLink className="h-3 w-3" />
-                                                </a>
+                                                </button>
                                             </div>
                                         </div>
                                     )
@@ -329,10 +327,13 @@ export function FocusView() {
                                                 {item.seller_notes && (
                                                     <p className="text-xs text-muted-foreground mb-3">{item.seller_notes}</p>
                                                 )}
-                                                <Button size="sm" variant="outline" className="w-full gap-2" asChild>
-                                                    <a href={item.item_url} target="_blank" rel="noreferrer">
-                                                        <ExternalLink className="h-3 w-3" /> View on Discogs
-                                                    </a>
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="outline" 
+                                                    className="w-full gap-2"
+                                                    onClick={() => openExternalLink(item.item_url)}
+                                                >
+                                                    <ExternalLink className="h-3 w-3" /> View on Discogs
                                                 </Button>
                                             </div>
                                         ))}

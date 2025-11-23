@@ -10,6 +10,7 @@
     "beforeBuildCommand": "pnpm build"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "Discogs Player",
@@ -20,7 +21,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://www.google.com https://*.googleapis.com; style-src 'self' 'unsafe-inline' https://www.youtube.com; img-src 'self' data: https: blob:; media-src 'self' https://www.youtube.com https://*.googlevideo.com; frame-src 'self' https://www.youtube.com; connect-src 'self' https://www.youtube.com https://*.youtube.com https://*.googlevideo.com https://www.google.com https://*.googleapis.com wss://*.googlevideo.com ws://*.googlevideo.com; font-src 'self' data: https:;"
     }
   },
   "bundle": {

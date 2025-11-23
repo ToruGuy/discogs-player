@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { usePlayer } from "@/context/PlayerContext";
 import { useData } from "@/context/DataContext";
 import { cn } from "@/lib/utils";
+import { openExternalLink } from "@/lib/external-links";
 
 interface AlbumCardProps {
     album: Album;
@@ -41,6 +42,12 @@ export function AlbumCard({ album }: AlbumCardProps) {
         toggleLike(album.id);
     };
 
+    const handleExternalLink = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openExternalLink(album.release_url);
+    };
+
     return (
     <Card className={cn("group relative border-none bg-transparent shadow-none transition-transform duration-200", isCurrentAlbum ? "scale-105" : "hover:scale-105")}>
         <CardContent className="p-0 relative aspect-square overflow-hidden rounded-md bg-muted">
@@ -68,12 +75,9 @@ export function AlbumCard({ album }: AlbumCardProps) {
                 size="icon" 
                 variant="outline" 
                 className="rounded-full h-10 w-10"
-                asChild
-                onClick={(e) => e.stopPropagation()}
+                onClick={handleExternalLink}
             >
-                <a href={album.release_url} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="h-4 w-4" />
-                </a>
             </Button>
         </div>
 

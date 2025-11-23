@@ -33,7 +33,13 @@ export function YoutubePlayer() {
 
   if (!currentVideo) return null;
 
-  const src = `https://www.youtube.com/embed/${currentVideo.youtube_video_id}?autoplay=${isPlaying ? 1 : 0}&enablejsapi=1&origin=${window.location.origin}`;
+  // In Tauri, use a proper origin that YouTube accepts
+  // For Tauri apps, we can use the dev URL or omit origin
+  const origin = window.location.protocol === 'tauri:' 
+    ? 'http://localhost:5173' 
+    : window.location.origin;
+  
+  const src = `https://www.youtube.com/embed/${currentVideo.youtube_video_id}?autoplay=${isPlaying ? 1 : 0}&enablejsapi=1&origin=${origin}`;
 
   return (
     <div className="hidden">
