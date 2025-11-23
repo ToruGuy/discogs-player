@@ -1,10 +1,27 @@
-import { Play, Pause, SkipBack, SkipForward, ThumbsUp, ThumbsDown, Plus, Heart, X } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, ThumbsUp, ThumbsDown, Plus, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { ImportDialog } from "@/components/ImportDialog";
+import { usePlayer } from "@/context/PlayerContext";
+import { useData } from "@/context/DataContext";
 
 export function TopBar() {
+  const { 
+      currentAlbum, 
+      isPlaying, 
+      togglePlay, 
+      nextTrack, 
+      prevTrack, 
+      volume, 
+      setVolume,
+      currentVideo 
+  } = usePlayer();
+
+  const { toggleLike } = useData();
+
+  const isLiked = currentAlbum?.user_interactions?.some(i => i.interaction_type === 'liked');
+
   return (
     <div className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center px-4 justify-between select-none drag-region">
       {/* Left: App Title / Home */}
@@ -16,45 +33,71 @@ export function TopBar() {
       <div className="flex-1 flex items-center justify-center gap-6">
         
         {/* Track Info (Mini) */}
-        <div className="flex items-center gap-3 w-64 justify-end text-right hidden md:flex">
-          <div className="flex flex-col">
-            <span className="text-sm font-medium truncate max-w-[150px]">Good Song Title</span>
-            <span className="text-xs text-muted-foreground truncate max-w-[150px]">Famous Artist</span>
-          </div>
-          <div className="h-10 w-10 bg-muted rounded-md border border-border/50" />
+        <div className="flex items-center gap-3 w-64 justify-end text-right hidden md:flex opacity-100 transition-opacity">
+           {currentAlbum ? (
+               <>
+                <div className="flex flex-col overflow-hidden">
+                    <span className="text-sm font-medium truncate">{currentAlbum.title}</span>
+                    <span className="text-xs text-muted-foreground truncate">{currentAlbum.artist}</span>
+                </div>
+                <div className="h-10 w-10 bg-muted rounded-md border border-border/50 overflow-hidden">
+                    <img src={currentAlbum.image_url} alt="Cover" className="w-full h-full object-cover" />
+                </div>
+               </>
+           ) : (
+               <span className="text-xs text-muted-foreground">Select a record...</span>
+           )}
         </div>
 
         {/* Transport */}
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-10 w-10">
+          <Button variant="ghost" size="icon" className="h-10 w-10" onClick={prevTrack} disabled={!currentAlbum}>
             <SkipBack className="h-5 w-5" />
           </Button>
           
-          <Button variant="default" size="icon" className="h-12 w-12 rounded-full shadow-md">
-            <Play className="h-6 w-6 ml-1" />
+          <Button 
+            variant="default" 
+            size="icon" 
+            className="h-12 w-12 rounded-full shadow-md" 
+            onClick={togglePlay}
+            disabled={!currentAlbum}
+          >
+            {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 ml-1" />}
           </Button>
 
-          <Button variant="ghost" size="icon" className="h-10 w-10">
+          <Button variant="ghost" size="icon" className="h-10 w-10" onClick={nextTrack} disabled={!currentAlbum}>
             <SkipForward className="h-5 w-5" />
           </Button>
         </div>
 
         {/* Feedback */}
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-destructive">
+           {/* Placeholder for Dislike logic later */}
+          <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-destructive" disabled={!currentAlbum}>
             <ThumbsDown className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-primary">
-            <ThumbsUp className="h-4 w-4" />
+          
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className={`h-9 w-9 ${isLiked ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
+            disabled={!currentAlbum}
+            onClick={() => currentAlbum && toggleLike(currentAlbum.id)}
+          >
+            <ThumbsUp className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
           </Button>
         </div>
 
-        {/* Scrubber (Visual only for now) */}
-        <div className="w-24 hidden lg:block">
-           <Slider defaultValue={[33]} max={100} step={1} className="w-full" />
+        {/* Volume Scrubber */}
+        <div className="w-24 hidden lg:block group">
+           <Slider 
+              value={[volume]} 
+              onValueChange={(val) => setVolume(val[0])} 
+              max={100} 
+              step={1} 
+              className="w-full" 
+            />
         </div>
-         <span className="text-xs font-mono text-muted-foreground hidden lg:block">0:45 / 3:19</span>
-
       </div>
 
       {/* Right: Quick Actions */}
@@ -74,4 +117,3 @@ export function TopBar() {
     </div>
   );
 }
-
