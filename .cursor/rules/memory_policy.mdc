@@ -72,7 +72,7 @@ Memory is not documentation. Memory is the foundation of **continuity, pattern r
 ### **Required Memory Fields**
 
 **Every memory MUST include:**
-- **Author** (one of: GARRY | ARLO | MAYA | BOB | TAKO)
+- **Author** (one of: GARRY | ARLO | MAYA | BOB | LUNA | TAKO)
 - **Workspace** (matches current workspace, e.g., `personal`, `investment`, `shared`)
 - **Visibility** (one of: private | agent | team | public)
 - **Date** (when memory was created)
@@ -108,7 +108,7 @@ observations: [
 
 - **private**: Only Author can read (sensitive thoughts, client confidential)
 - **agent**: Author + specified ReaderAgent can read (collaboration between two agents)
-- **team**: All team members (GARRY, ARLO, MAYA, BOB, TAKO) can read (default for most memories)
+- **team**: All team members (GARRY, ARLO, MAYA, BOB, LUNA, TAKO) can read (default for most memories)
 - **public**: Anyone can read (general knowledge, shareable insights)
 
 **Implementation:**
@@ -286,10 +286,25 @@ Agent MUST:
 
 **Memory Focus**: `(BOB)-[:BUILT]->(system)-[:ENABLED/BLOCKED]->(outcome)`
 
+### **LUNA (Interaction Craftsperson)**
+**Remember:**
+- Interaction patterns that delighted users
+- Design system components that scaled
+- Usability test results (what failed/succeeded)
+- Visual styles that resonated with brand
+- User feedback on specific flows
+
+**Personal Observations Style:**
+- "LUNA: This flow feels clunky because..."
+- "LUNA: User testing showed confusion at step X"
+- "LUNA: Design system component Y is breaking in context Z"
+
+**Memory Focus**: `(LUNA)-[:DESIGNED]->(interface)-[:TESTED_BY]->(user)`
+
 ## 🚨 **MEMORY QUALITY GATES**
 
 ### **Before Creating Memory**
-- [ ] Author set (GARRY | ARLO | MAYA | BOB | TAKO)
+- [ ] Author set (GARRY | ARLO | MAYA | BOB | LUNA | TAKO)
 - [ ] Visibility set (private | agent | team | public)
 - [ ] Date and type specified
 - [ ] Does this teach something actionable?
