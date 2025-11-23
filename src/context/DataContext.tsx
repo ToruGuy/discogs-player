@@ -8,6 +8,7 @@ interface DataContextType {
   isLoading: boolean;
   refresh: () => Promise<void>;
   toggleLike: (id: number) => Promise<void>;
+  toggleVideoLike: (albumId: number, videoIndex: number, action: 'like' | 'dislike') => Promise<void>;
   scrapeUrl: (url: string) => Promise<void>;
 }
 
@@ -52,7 +53,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                  });
                  toast.success("Added to Bag");
              } else {
-                 const idx = interactions.findIndex(i => i.interaction_type === 'liked');
+                 const idx = interactions.findIndex(i => i.interaction_type === 'liked' && i.video_index === undefined);
                  if (idx > -1) interactions.splice(idx, 1);
                  toast.info("Removed from Bag");
              }
@@ -64,6 +65,47 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     } catch (error) {
       console.error("Like toggle failed", error);
+      toast.error("Action failed");
+    }
+  };
+
+  const toggleVideoLike = async (albumId: number, videoIndex: number, action: 'like' | 'dislike') => {
+    try {
+      const result = await api.toggleVideoLike(albumId, videoIndex, action);
+      
+      // Optimistic update
+      setAlbums(prev => prev.map(album => {
+        if (album.id === albumId) {
+          const interactions = album.user_interactions ? [...album.user_interactions] : [];
+          
+          // Remove existing like/dislike for this video
+          const existingIdx = interactions.findIndex(
+            i => i.video_index === videoIndex && 
+            (i.interaction_type === 'liked' || i.interaction_type === 'disliked')
+          );
+          
+          if (existingIdx > -1) {
+            interactions.splice(existingIdx, 1);
+          }
+          
+          // Add new interaction if not removed
+          if (result) {
+            interactions.push({
+              interaction_type: result,
+              video_index: videoIndex,
+              created_at: new Date().toISOString()
+            });
+            toast.success(action === 'like' ? "Track liked" : "Track disliked");
+          } else {
+            toast.info("Removed");
+          }
+          
+          return { ...album, user_interactions: interactions };
+        }
+        return album;
+      }));
+    } catch (error) {
+      console.error("Video like toggle failed", error);
       toast.error("Action failed");
     }
   };
@@ -88,6 +130,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       refresh,
       toggleLike,
+      toggleVideoLike,
       scrapeUrl
     }}>
       {children}

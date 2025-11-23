@@ -7,25 +7,60 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 class MockApiService {
   private albums: Album[] = [...MOCK_ALBUMS];
   private likedAlbumIds: Set<number> = new Set();
+  // Track video-level interactions: key = "albumId:videoIndex", value = 'liked' | 'disliked'
+  private videoInteractions: Map<string, 'liked' | 'disliked'> = new Map();
 
   constructor() {
     // Initialize some liked albums from mock data interactions
     this.albums.forEach(album => {
-      if (album.user_interactions?.some(i => i.interaction_type === 'liked')) {
+      if (album.user_interactions?.some(i => i.interaction_type === 'liked' && i.video_index === undefined && i.track_index === undefined)) {
         this.likedAlbumIds.add(album.id);
       }
+      // Initialize video-level interactions from mock data
+      album.user_interactions?.forEach(interaction => {
+        // Use video_index if available, otherwise track_index (for backwards compatibility)
+        const videoIndex = interaction.video_index !== undefined 
+          ? interaction.video_index 
+          : interaction.track_index;
+          
+        if (videoIndex !== undefined && 
+            (interaction.interaction_type === 'liked' || interaction.interaction_type === 'disliked')) {
+          const key = `${album.id}:${videoIndex}`;
+          this.videoInteractions.set(key, interaction.interaction_type);
+        }
+      });
     });
   }
 
   async getAlbums(): Promise<Album[]> {
     await delay(300);
     // Return albums with up-to-date liked status
-    return this.albums.map(album => ({
-      ...album,
-      user_interactions: this.likedAlbumIds.has(album.id)
-        ? [...(album.user_interactions || []), { interaction_type: 'liked', created_at: new Date().toISOString() } as any]
-        : (album.user_interactions || []).filter(i => i.interaction_type !== 'liked')
-    }));
+    return this.albums.map(album => {
+      const interactions: any[] = [];
+      
+      // Add album-level liked interaction if exists
+      if (this.likedAlbumIds.has(album.id)) {
+        interactions.push({ interaction_type: 'liked', created_at: new Date().toISOString() });
+      }
+      
+      // Add video-level interactions
+      album.youtube_videos?.forEach((_, videoIndex) => {
+        const key = `${album.id}:${videoIndex}`;
+        const interactionType = this.videoInteractions.get(key);
+        if (interactionType) {
+          interactions.push({
+            interaction_type: interactionType,
+            video_index: videoIndex,
+            created_at: new Date().toISOString()
+          });
+        }
+      });
+      
+      return {
+        ...album,
+        user_interactions: interactions
+      };
+    });
   }
 
   async getAlbum(id: number): Promise<Album | undefined> {
@@ -33,12 +68,30 @@ class MockApiService {
     const album = this.albums.find((a) => a.id === id);
     if (!album) return undefined;
     
+    const interactions: any[] = [];
+    
+    // Add album-level liked interaction if exists
+    if (this.likedAlbumIds.has(album.id)) {
+      interactions.push({ interaction_type: 'liked', created_at: new Date().toISOString() });
+    }
+    
+    // Add video-level interactions
+    album.youtube_videos?.forEach((_, videoIndex) => {
+      const key = `${album.id}:${videoIndex}`;
+      const interactionType = this.videoInteractions.get(key);
+      if (interactionType) {
+        interactions.push({
+          interaction_type: interactionType,
+          video_index: videoIndex,
+          created_at: new Date().toISOString()
+        });
+      }
+    });
+    
     return {
-        ...album,
-        user_interactions: this.likedAlbumIds.has(album.id)
-          ? [...(album.user_interactions || []), { interaction_type: 'liked', created_at: new Date().toISOString() } as any]
-          : (album.user_interactions || []).filter(i => i.interaction_type !== 'liked')
-      };
+      ...album,
+      user_interactions: interactions
+    };
   }
 
   async toggleLike(albumId: number): Promise<boolean> {
@@ -50,6 +103,23 @@ class MockApiService {
       this.likedAlbumIds.add(albumId);
       return true; // Liked
     }
+  }
+
+  async toggleVideoLike(albumId: number, videoIndex: number, action: 'like' | 'dislike'): Promise<'liked' | 'disliked' | null> {
+    await delay(100);
+    const key = `${albumId}:${videoIndex}`;
+    const currentInteraction = this.videoInteractions.get(key);
+    
+    // If clicking the same action, remove it (toggle off)
+    if (currentInteraction === action + 'd') {
+      this.videoInteractions.delete(key);
+      return null; // Removed
+    }
+    
+    // Otherwise, set the new interaction
+    const newInteraction = action + 'd' as 'liked' | 'disliked';
+    this.videoInteractions.set(key, newInteraction);
+    return newInteraction;
   }
 
   async scrapeUrl(url: string): Promise<{ success: boolean; message: string; jobId?: string }> {

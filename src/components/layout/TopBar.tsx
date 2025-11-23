@@ -9,18 +9,27 @@ import { useData } from "@/context/DataContext";
 export function TopBar() {
   const { 
       currentAlbum, 
+      currentTrackIndex,
       isPlaying, 
       togglePlay, 
       nextTrack, 
       prevTrack, 
       volume, 
-      setVolume,
-      currentVideo 
+      setVolume
   } = usePlayer();
 
-  const { toggleLike } = useData();
+  const { albums, toggleVideoLike } = useData();
 
-  const isLiked = currentAlbum?.user_interactions?.some(i => i.interaction_type === 'liked');
+  // Get the latest album data from DataContext to ensure we have up-to-date interactions
+  const latestAlbum = currentAlbum ? albums.find(a => a.id === currentAlbum.id) : null;
+  const albumToUse = latestAlbum || currentAlbum;
+
+  const videoInteraction = albumToUse?.user_interactions?.find(
+    i => i.video_index === currentTrackIndex &&
+    (i.interaction_type === 'liked' || i.interaction_type === 'disliked')
+  );
+  const isLiked = videoInteraction?.interaction_type === 'liked';
+  const isDisliked = videoInteraction?.interaction_type === 'disliked';
 
   return (
     <div className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center px-4 justify-between select-none drag-region">
@@ -34,14 +43,14 @@ export function TopBar() {
         
         {/* Track Info (Mini) */}
         <div className="flex items-center gap-3 w-64 justify-end text-right hidden md:flex opacity-100 transition-opacity">
-           {currentAlbum ? (
+           {albumToUse ? (
                <>
                 <div className="flex flex-col overflow-hidden">
-                    <span className="text-sm font-medium truncate">{currentAlbum.title}</span>
-                    <span className="text-xs text-muted-foreground truncate">{currentAlbum.artist}</span>
+                    <span className="text-sm font-medium truncate">{albumToUse.title}</span>
+                    <span className="text-xs text-muted-foreground truncate">{albumToUse.artist}</span>
                 </div>
                 <div className="h-10 w-10 bg-muted rounded-md border border-border/50 overflow-hidden">
-                    <img src={currentAlbum.image_url} alt="Cover" className="w-full h-full object-cover" />
+                    <img src={albumToUse.image_url} alt="Cover" className="w-full h-full object-cover" />
                 </div>
                </>
            ) : (
@@ -51,7 +60,7 @@ export function TopBar() {
 
         {/* Transport */}
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-10 w-10" onClick={prevTrack} disabled={!currentAlbum}>
+          <Button variant="ghost" size="icon" className="h-10 w-10" onClick={prevTrack} disabled={!albumToUse}>
             <SkipBack className="h-5 w-5" />
           </Button>
           
@@ -60,31 +69,44 @@ export function TopBar() {
             size="icon" 
             className="h-12 w-12 rounded-full shadow-md" 
             onClick={togglePlay}
-            disabled={!currentAlbum}
+            disabled={!albumToUse}
           >
             {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 ml-1" />}
           </Button>
 
-          <Button variant="ghost" size="icon" className="h-10 w-10" onClick={nextTrack} disabled={!currentAlbum}>
+          <Button variant="ghost" size="icon" className="h-10 w-10" onClick={nextTrack} disabled={!albumToUse}>
             <SkipForward className="h-5 w-5" />
           </Button>
         </div>
 
         {/* Feedback */}
         <div className="flex items-center gap-1">
-           {/* Placeholder for Dislike logic later */}
-          <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-destructive" disabled={!currentAlbum}>
-            <ThumbsDown className="h-4 w-4" />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className={`h-9 w-9 transition-colors ${isDisliked ? 'text-destructive' : 'text-muted-foreground hover:text-destructive'}`}
+            disabled={!albumToUse || currentTrackIndex === undefined}
+            onClick={() => {
+              if (albumToUse && currentTrackIndex !== undefined) {
+                toggleVideoLike(albumToUse.id, currentTrackIndex, 'dislike');
+              }
+            }}
+          >
+            <ThumbsDown className={`h-4 w-4 transition-all ${isDisliked ? 'fill-current' : ''}`} />
           </Button>
           
           <Button 
             variant="ghost" 
             size="icon" 
-            className={`h-9 w-9 ${isLiked ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
-            disabled={!currentAlbum}
-            onClick={() => currentAlbum && toggleLike(currentAlbum.id)}
+            className={`h-9 w-9 transition-colors ${isLiked ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
+            disabled={!albumToUse || currentTrackIndex === undefined}
+            onClick={() => {
+              if (albumToUse && currentTrackIndex !== undefined) {
+                toggleVideoLike(albumToUse.id, currentTrackIndex, 'like');
+              }
+            }}
           >
-            <ThumbsUp className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+            <ThumbsUp className={`h-4 w-4 transition-all ${isLiked ? 'fill-current' : ''}`} />
           </Button>
         </div>
 

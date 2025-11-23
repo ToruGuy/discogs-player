@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import type { Album, YoutubeVideo } from '@/types';
 
 interface PlayerContextType {

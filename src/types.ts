@@ -25,7 +25,8 @@ export type CollectionItem = {
 
 export type UserInteraction = {
   interaction_type: 'played' | 'liked' | 'disliked';
-  video_index?: number;
+  track_index?: number; // Index in tracklist array
+  video_index?: number; // Deprecated, kept for backwards compatibility
   created_at: string;
 };
 

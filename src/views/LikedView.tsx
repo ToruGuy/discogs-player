@@ -7,7 +7,10 @@ export function LikedView() {
 
   const likedAlbums = useMemo(() => {
       return albums.filter(album => 
-          album.user_interactions?.some(i => i.interaction_type === 'liked')
+          album.user_interactions?.some(i => 
+              (i.interaction_type === 'liked' || i.interaction_type === 'disliked') && 
+              i.video_index !== undefined
+          )
       );
   }, [albums]);
 

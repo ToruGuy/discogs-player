@@ -2,7 +2,7 @@ import type { Album } from "@/types";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Play, Heart, ExternalLink, Pause } from "lucide-react";
+import { Play, ExternalLink, Pause, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePlayer } from "@/context/PlayerContext";
 import { useData } from "@/context/DataContext";
@@ -15,13 +15,19 @@ interface AlbumCardProps {
 
 export function AlbumCard({ album }: AlbumCardProps) {
     const { playAlbum, currentAlbum, isPlaying, togglePlay } = usePlayer();
-    const { toggleLike } = useData();
     
     const hasYoutubeVideos = album.youtube_videos && album.youtube_videos.length > 0;
     const mainCollectionItem = album.collection_items?.[0];
     const isNew = album.created_at.includes("2025-11-03"); // logic can be improved
     const hasBeenPlayed = album.user_interactions?.some(i => i.interaction_type === 'played');
-    const isLiked = album.user_interactions?.some(i => i.interaction_type === 'liked');
+    
+    // Count liked and disliked tracks
+    const likedCount = album.user_interactions?.filter(
+        i => i.interaction_type === 'liked' && i.video_index !== undefined
+    ).length || 0;
+    const dislikedCount = album.user_interactions?.filter(
+        i => i.interaction_type === 'disliked' && i.video_index !== undefined
+    ).length || 0;
     
     const isCurrentAlbum = currentAlbum?.id === album.id;
 
@@ -34,12 +40,6 @@ export function AlbumCard({ album }: AlbumCardProps) {
         } else {
             playAlbum(album);
         }
-    };
-
-    const handleLikeClick = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleLike(album.id);
     };
 
     const handleExternalLink = (e: React.MouseEvent) => {
@@ -111,14 +111,20 @@ export function AlbumCard({ album }: AlbumCardProps) {
         </Link>
         <div className="flex justify-between w-full items-center">
             <span className="text-xs text-muted-foreground truncate max-w-[120px]">{album.artist}</span>
-            <Button 
-                variant="ghost" 
-                size="icon" 
-                className={cn("h-6 w-6", isLiked ? "text-primary" : "text-muted-foreground hover:text-primary")}
-                onClick={handleLikeClick}
-            >
-                <Heart className={cn("h-3 w-3", isLiked ? "fill-current" : "")} />
-            </Button>
+            <div className="flex flex-col items-end gap-0.5">
+                {likedCount > 0 && (
+                    <div className="flex items-center gap-1 text-primary text-xs">
+                        <ThumbsUp className="h-3 w-3" />
+                        <span className="font-medium">x{likedCount}</span>
+                    </div>
+                )}
+                {dislikedCount > 0 && (
+                    <div className="flex items-center gap-1 text-destructive text-xs">
+                        <ThumbsDown className="h-3 w-3" />
+                        <span className="font-medium">x{dislikedCount}</span>
+                    </div>
+                )}
+            </div>
         </div>
         
         {/* Styles */}

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Play, Heart, ExternalLink, Pause, Disc, Clock } from "lucide-react";
+import { Play, ExternalLink, Pause, Disc, Clock, ThumbsUp, ThumbsDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { openExternalLink } from "@/lib/external-links";
@@ -15,7 +15,7 @@ import { openExternalLink } from "@/lib/external-links";
 export function FocusView() {
   const { id } = useParams();
   const location = useLocation();
-  const { albums, toggleLike } = useData();
+  const { albums, toggleVideoLike } = useData();
   const { playAlbum, currentAlbum, isPlaying, togglePlay, currentVideo } = usePlayer();
   
   const [viewAlbum, setViewAlbum] = useState<Album | null>(null);
@@ -37,7 +37,10 @@ export function FocusView() {
       return <div className="flex items-center justify-center h-full text-muted-foreground">No record selected.</div>;
   }
 
-  const isLiked = viewAlbum.user_interactions?.some(i => i.interaction_type === 'liked');
+  // Check if album has any liked/disliked tracks
+  const hasLikedTracks = viewAlbum.user_interactions?.some(i => 
+    (i.interaction_type === 'liked' || i.interaction_type === 'disliked') && i.video_index !== undefined
+  );
   const isCurrentlyPlayingAlbum = currentAlbum?.id === viewAlbum.id;
   const hasVideos = viewAlbum.youtube_videos && viewAlbum.youtube_videos.length > 0;
 
@@ -73,15 +76,15 @@ export function FocusView() {
                    {isCurrentlyPlayingAlbum && isPlaying ? <Pause className="mr-2 h-5 w-5" /> : <Play className="mr-2 h-5 w-5" />}
                    {isCurrentlyPlayingAlbum && isPlaying ? "Pause" : "Play Album"}
                </Button>
-               <Button 
-                    variant="outline" 
-                    size="icon" 
-                    className="h-11 w-11"
-                    onClick={() => toggleLike(viewAlbum.id)}
-                >
-                   <Heart className={cn("h-5 w-5", isLiked ? "fill-primary text-primary" : "")} />
-               </Button>
            </div>
+           
+           {hasLikedTracks && (
+               <div className="mb-4 p-3 rounded-md bg-primary/10 border border-primary/20">
+                   <p className="text-xs text-muted-foreground">
+                       This album has tracks in your bag
+                   </p>
+               </div>
+           )}
 
            <div className="space-y-4">
                <div>
@@ -234,6 +237,11 @@ export function FocusView() {
                             <div className="space-y-1">
                                 {viewAlbum.youtube_videos.map((video: YoutubeVideo, idx: number) => {
                                     const isPlayingVideo = isCurrentlyPlayingAlbum && currentVideo?.youtube_video_id === video.youtube_video_id;
+                                    const videoInteraction = viewAlbum.user_interactions?.find(
+                                        i => i.video_index === idx && (i.interaction_type === 'liked' || i.interaction_type === 'disliked')
+                                    );
+                                    const isLiked = videoInteraction?.interaction_type === 'liked';
+                                    const isDisliked = videoInteraction?.interaction_type === 'disliked';
                                     
                                     return (
                                         <div 
@@ -250,13 +258,39 @@ export function FocusView() {
                                             <div className="flex-1 font-medium text-sm">
                                                 {video.title || `Video ${idx + 1}`}
                                             </div>
-                                            <div className="text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+                                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        toggleVideoLike(viewAlbum.id, idx, 'like');
+                                                    }}
+                                                    className={cn(
+                                                        "p-2 rounded hover:bg-muted transition-colors",
+                                                        isLiked && "text-primary"
+                                                    )}
+                                                    title="Like track"
+                                                >
+                                                    <ThumbsUp className={cn("h-4 w-4", isLiked && "fill-current")} />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        toggleVideoLike(viewAlbum.id, idx, 'dislike');
+                                                    }}
+                                                    className={cn(
+                                                        "p-2 rounded hover:bg-muted transition-colors",
+                                                        isDisliked && "text-destructive"
+                                                    )}
+                                                    title="Dislike track"
+                                                >
+                                                    <ThumbsDown className={cn("h-4 w-4", isDisliked && "fill-current")} />
+                                                </button>
                                                 <button 
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         openExternalLink(video.youtube_url);
                                                     }}
-                                                    className="hover:text-primary block p-2"
+                                                    className="p-2 rounded hover:bg-muted hover:text-primary transition-colors"
                                                     title="Watch on YouTube"
                                                 >
                                                     <ExternalLink className="h-3 w-3" />
@@ -268,6 +302,7 @@ export function FocusView() {
                             </div>
                         </div>
                     )}
+
 
                     {/* User History Section */}
                     {viewAlbum.user_interactions && viewAlbum.user_interactions.length > 0 && (
