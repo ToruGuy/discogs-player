@@ -10,6 +10,7 @@ export type YoutubeVideo = {
   youtube_url: string;
   youtube_video_id: string;
   order_index: number;
+  title?: string;
 };
 
 export type CollectionItem = {
