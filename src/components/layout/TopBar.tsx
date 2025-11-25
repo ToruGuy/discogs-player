@@ -1,4 +1,4 @@
-import { Play, Pause, SkipBack, SkipForward, ThumbsUp, ThumbsDown, Plus, Heart } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, ThumbsUp, ThumbsDown, Plus, Heart, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
@@ -15,7 +15,10 @@ export function TopBar() {
       nextTrack, 
       prevTrack, 
       volume, 
-      setVolume
+      setVolume,
+      isPlayerOpen,
+      togglePlayerOverlay,
+      queue
   } = usePlayer();
 
   const { albums, toggleVideoLike } = useData();
@@ -47,7 +50,12 @@ export function TopBar() {
                <>
                 <div className="flex flex-col overflow-hidden">
                     <span className="text-sm font-medium truncate">{albumToUse.title}</span>
-                    <span className="text-xs text-muted-foreground truncate">{albumToUse.artist}</span>
+                    <span className="text-xs text-muted-foreground truncate">
+                      {albumToUse.artist}
+                      {queue.length > 0 && (
+                        <span className="ml-2 text-primary">• {queue.length} in queue</span>
+                      )}
+                    </span>
                 </div>
                 <div className="h-10 w-10 bg-muted rounded-md border border-border/50 overflow-hidden">
                     <img src={albumToUse.image_url} alt="Cover" className="w-full h-full object-cover" />
@@ -120,6 +128,21 @@ export function TopBar() {
               className="w-full" 
             />
         </div>
+
+        {/* Expand/Collapse Player Overlay */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9"
+          onClick={togglePlayerOverlay}
+          disabled={!albumToUse}
+        >
+          {isPlayerOpen ? (
+            <ChevronUp className="h-4 w-4" />
+          ) : (
+            <ChevronDown className="h-4 w-4" />
+          )}
+        </Button>
       </div>
 
       {/* Right: Quick Actions */}

@@ -1,62 +1,238 @@
-import React, { createContext, useContext, useState } from 'react';
-import type { Album, YoutubeVideo } from '@/types';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import type { Album, YoutubeVideo, QueueItem } from '@/types';
+import { convertAlbumToQueueItems, convertTrackToQueueItem } from '@/lib/queue-helpers';
+import { useData } from './DataContext';
 
 interface PlayerContextType {
   currentAlbum: Album | null;
   currentTrackIndex: number;
   isPlaying: boolean;
   volume: number;
-  playAlbum: (album: Album, trackIndex?: number) => void;
+  playTrack: (album: Album, trackIndex: number) => void;
+  playAlbum: (album: Album) => void;
+  playAlbumNext: (album: Album) => void;
+  addAlbumToQueue: (album: Album) => void;
   togglePlay: () => void;
   nextTrack: () => void;
   prevTrack: () => void;
+  jumpToQueueIndex: (index: number) => void;
   setVolume: (volume: number) => void;
   currentVideo: YoutubeVideo | null;
+  queue: QueueItem[];
+  queueIndex: number;
+  addToQueue: (items: QueueItem[]) => void;
+  playNow: (items: QueueItem[]) => void;
+  removeFromQueue: (index: number) => void;
+  clearQueue: () => void;
+  isPlayerOpen: boolean;
+  togglePlayerOverlay: () => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
+const QUEUE_STORAGE_KEY = 'discogs-player-queue';
+const QUEUE_INDEX_STORAGE_KEY = 'discogs-player-queue-index';
+
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
-  const [currentAlbum, setCurrentAlbum] = useState<Album | null>(null);
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const { albums } = useData();
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(33);
+  const [queue, setQueue] = useState<QueueItem[]>(() => {
+    const stored = localStorage.getItem(QUEUE_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  });
+  const [queueIndex, setQueueIndex] = useState(() => {
+    const stored = localStorage.getItem(QUEUE_INDEX_STORAGE_KEY);
+    return stored ? parseInt(stored, 10) : 0;
+  });
+  const [isPlayerOpen, setIsPlayerOpen] = useState(false);
 
-  const currentVideo = currentAlbum?.youtube_videos?.[currentTrackIndex] || null;
+  // Persist queue to localStorage
+  useEffect(() => {
+    localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queue));
+  }, [queue]);
 
-  const playAlbum = (album: Album, trackIndex = 0) => {
-    if (!album.youtube_videos || album.youtube_videos.length === 0) return;
+  // Persist queueIndex to localStorage
+  useEffect(() => {
+    localStorage.setItem(QUEUE_INDEX_STORAGE_KEY, queueIndex.toString());
+  }, [queueIndex]);
+
+  // Derive currentVideo and currentAlbum from queue
+  const { currentVideo, currentAlbum, currentTrackIndex } = useMemo(() => {
+    if (queue.length === 0 || queueIndex < 0 || queueIndex >= queue.length) {
+      return { currentVideo: null, currentAlbum: null, currentTrackIndex: 0 };
+    }
+
+    const currentItem = queue[queueIndex];
+    const album = albums.find(a => a.id === currentItem.albumId);
     
-    setCurrentAlbum(album);
-    setCurrentTrackIndex(trackIndex);
+    if (!album || !album.youtube_videos) {
+      return { currentVideo: null, currentAlbum: null, currentTrackIndex: 0 };
+    }
+
+    const video = album.youtube_videos.find(
+      v => v.youtube_video_id === currentItem.videoId
+    );
+
+    return {
+      currentVideo: video || null,
+      currentAlbum: album,
+      currentTrackIndex: currentItem.trackIndex
+    };
+  }, [queue, queueIndex, albums]);
+
+  const playTrack = (album: Album, trackIndex: number) => {
+    if (!album.youtube_videos || trackIndex < 0 || trackIndex >= album.youtube_videos.length) {
+      return;
+    }
+
+    const item = convertTrackToQueueItem(album, trackIndex);
+    if (!item) return;
+
+    // Replace queue with single track and play
+    setQueue([item]);
+    setQueueIndex(0);
     setIsPlaying(true);
   };
 
+  const playAlbum = (album: Album) => {
+    if (!album.youtube_videos || album.youtube_videos.length === 0) return;
+
+    const items = convertAlbumToQueueItems(album);
+    if (items.length === 0) return;
+
+    // Replace queue with all album tracks
+    setQueue(items);
+    setQueueIndex(0);
+    setIsPlaying(true);
+  };
+
+  const playAlbumNext = (album: Album) => {
+    if (!album.youtube_videos || album.youtube_videos.length === 0) return;
+
+    const items = convertAlbumToQueueItems(album);
+    if (items.length === 0) return;
+
+    // Insert album after current track
+    setQueue(prev => {
+      if (queueIndex < prev.length) {
+        return [
+          ...prev.slice(0, queueIndex + 1),
+          ...items,
+          ...prev.slice(queueIndex + 1)
+        ];
+      } else {
+        return [...prev, ...items];
+      }
+    });
+    // Don't change queueIndex - current track continues playing
+  };
+
+  const addAlbumToQueue = (album: Album) => {
+    if (!album.youtube_videos || album.youtube_videos.length === 0) return;
+
+    const items = convertAlbumToQueueItems(album);
+    if (items.length === 0) return;
+
+    // Append to end of queue
+    setQueue(prev => [...prev, ...items]);
+    // Don't change queueIndex - current track continues playing
+  };
+
   const togglePlay = () => {
-    if (!currentAlbum) return;
+    if (queue.length === 0 || queueIndex < 0 || queueIndex >= queue.length) return;
     setIsPlaying(!isPlaying);
   };
 
   const nextTrack = () => {
-    if (!currentAlbum || !currentAlbum.youtube_videos) return;
-    
-    if (currentTrackIndex < currentAlbum.youtube_videos.length - 1) {
-      setCurrentTrackIndex(prev => prev + 1);
-    } else {
-        // Loop or stop? For now, let's stop or loop back to start of album?
-        // Let's just loop to 0 for now
-        setCurrentTrackIndex(0);
+    if (queue.length === 0) return;
+
+    // Check if there's a next item in queue
+    if (queueIndex + 1 < queue.length) {
+      setQueueIndex(prev => prev + 1);
+      setIsPlaying(true);
+      return;
     }
+
+    // Queue exhausted - check for auto-continuation
+    const lastItem = queue[queueIndex];
+    if (lastItem && lastItem.trackIndex < lastItem.totalTracksInAlbum - 1) {
+      // Auto-add remaining tracks from the same album
+      const album = albums.find(a => a.id === lastItem.albumId);
+      if (album) {
+        const remainingTracks = convertAlbumToQueueItems(
+          album,
+          lastItem.trackIndex + 1
+        );
+        if (remainingTracks.length > 0) {
+          setQueue(prev => [...prev, ...remainingTracks]);
+          setQueueIndex(prev => prev + 1);
+          setIsPlaying(true);
+          return;
+        }
+      }
+    }
+
+    // No more tracks - stop playing
+    setIsPlaying(false);
   };
 
   const prevTrack = () => {
-     if (!currentAlbum || !currentAlbum.youtube_videos) return;
+    if (queue.length === 0) return;
 
-     if (currentTrackIndex > 0) {
-         setCurrentTrackIndex(prev => prev - 1);
-     } else {
-         setCurrentTrackIndex(0);
-     }
+    if (queueIndex > 0) {
+      setQueueIndex(prev => prev - 1);
+      setIsPlaying(true);
+    } else {
+      // Already at start - restart current track
+      setIsPlaying(true);
+    }
+  };
+
+  const jumpToQueueIndex = (index: number) => {
+    if (index < 0 || index >= queue.length) return;
+    setQueueIndex(index);
+    setIsPlaying(true);
+  };
+
+  const addToQueue = (items: QueueItem[]) => {
+    setQueue(prev => [...prev, ...items]);
+  };
+
+  const playNow = (items: QueueItem[]) => {
+    // Insert items immediately after current track
+    setQueue(prev => {
+      if (queueIndex < prev.length) {
+        return [
+          ...prev.slice(0, queueIndex + 1),
+          ...items,
+          ...prev.slice(queueIndex + 1)
+        ];
+      } else {
+        // If we're at the end, just append
+        return [...prev, ...items];
+      }
+    });
+  };
+
+  const removeFromQueue = (index: number) => {
+    setQueue(prev => {
+      const newQueue = prev.filter((_, i) => i !== index);
+      // Adjust queueIndex if needed
+      if (index <= queueIndex && queueIndex > 0) {
+        setQueueIndex(prev => prev - 1);
+      }
+      return newQueue;
+    });
+  };
+
+  const clearQueue = () => {
+    setQueue([]);
+    setQueueIndex(0);
+  };
+
+  const togglePlayerOverlay = () => {
+    setIsPlayerOpen(prev => !prev);
   };
 
   return (
@@ -65,12 +241,24 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       currentTrackIndex,
       isPlaying,
       volume,
+      playTrack,
       playAlbum,
+      playAlbumNext,
+      addAlbumToQueue,
       togglePlay,
       nextTrack,
       prevTrack,
+      jumpToQueueIndex,
       setVolume,
-      currentVideo
+      currentVideo,
+      queue,
+      queueIndex,
+      addToQueue,
+      playNow,
+      removeFromQueue,
+      clearQueue,
+      isPlayerOpen,
+      togglePlayerOverlay
     }}>
       {children}
     </PlayerContext.Provider>

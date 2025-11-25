@@ -42,12 +42,11 @@ export function YoutubePlayer() {
   const src = `https://www.youtube.com/embed/${currentVideo.youtube_video_id}?autoplay=${isPlaying ? 1 : 0}&enablejsapi=1&origin=${origin}`;
 
   return (
-    <div className="hidden">
+    <div className="w-full h-full">
       <iframe
         ref={playerRef}
         id="youtube-player"
-        width="200"
-        height="200"
+        className="w-full h-full"
         src={src}
         frameBorder="0"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
