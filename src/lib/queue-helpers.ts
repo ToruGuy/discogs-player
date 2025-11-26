@@ -21,6 +21,7 @@ export function convertAlbumToQueueItems(
   const videos = album.youtube_videos.slice(startIndex, end);
 
   return videos.map((video, index) => ({
+    id: crypto.randomUUID(),
     videoId: video.youtube_video_id,
     title: video.title || `${album.artist} - ${album.title}`,
     artist: album.artist,
@@ -49,6 +50,7 @@ export function convertTrackToQueueItem(
 
   const video = album.youtube_videos[trackIndex];
   return {
+    id: crypto.randomUUID(),
     videoId: video.youtube_video_id,
     title: video.title || `${album.artist} - ${album.title}`,
     artist: album.artist,
@@ -60,4 +62,3 @@ export function convertTrackToQueueItem(
     source: 'album' as const
   };
 }
-

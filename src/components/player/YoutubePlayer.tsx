@@ -1,58 +1,64 @@
 import { useEffect, useRef } from 'react';
+import YouTube from 'react-youtube';
+// remove type import if it causes issues, or keep if resolved
+// import type { YouTubeProps } from 'react-youtube'; 
 import { usePlayer } from '@/context/PlayerContext';
 
 export function YoutubePlayer() {
   const { currentVideo, isPlaying, nextTrack } = usePlayer();
-  const playerRef = useRef<HTMLIFrameElement>(null);
+  const playerRef = useRef<any>(null);
 
-  // We need to handle the "ended" event to autoplay next track.
-  // Since we can't easily capture postMessage from iframe without a library in a robust way quickly,
-  // We will use a simple polling or just rely on manual for MVP if we don't want to add 'react-youtube'.
-  // BUT, for a good experience, let's try to use the window.onmessage API for YouTube Iframe API.
-  
+  // Sync play/pause state
+  // MOVED UP: Hooks must be called unconditionally
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-        if (event.origin !== "https://www.youtube.com") return;
-        
-        try {
-            const data = JSON.parse(event.data);
-            // YouTube Player State Change
-            // info: { playerState: 0 } -> Ended
-            if (data.event === "infoDelivery" && data.info && data.info.playerState === 0) {
-                console.log("Track ended, playing next...");
-                nextTrack();
-            }
-        } catch (e) {
-            // Ignore
-        }
-    };
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [nextTrack]);
+    if (playerRef.current) {
+      if (isPlaying) {
+        playerRef.current.playVideo();
+      } else {
+        playerRef.current.pauseVideo();
+      }
+    }
+  }, [isPlaying]);
 
   if (!currentVideo) return null;
 
-  // In Tauri, use a proper origin that YouTube accepts
-  // For Tauri apps, we can use the dev URL or omit origin
-  const origin = window.location.protocol === 'tauri:' 
-    ? 'http://localhost:5173' 
-    : window.location.origin;
-  
-  const src = `https://www.youtube.com/embed/${currentVideo.youtube_video_id}?autoplay=${isPlaying ? 1 : 0}&enablejsapi=1&origin=${origin}`;
+  const onPlayerReady = (event: any) => {
+    playerRef.current = event.target;
+    if (isPlaying) {
+      event.target.playVideo();
+    }
+  };
+
+  const onPlayerStateChange = (event: any) => {
+    // State 0 is ended
+    if (event.data === 0) {
+      console.log("Track ended, playing next...");
+      nextTrack();
+    }
+  };
+
+  const opts: any = {
+    height: '100%',
+    width: '100%',
+    playerVars: {
+      autoplay: isPlaying ? 1 : 0,
+      controls: 1,
+      modestbranding: 1,
+      origin: window.location.origin, // Important for API access
+    },
+  };
 
   return (
-    <div className="w-full h-full">
-      <iframe
-        ref={playerRef}
-        id="youtube-player"
+    <div className="w-full h-full bg-black">
+      <YouTube
+        key={currentVideo.youtube_video_id} // Force remount on video change to ensure clean state
+        videoId={currentVideo.youtube_video_id}
+        opts={opts}
+        onReady={onPlayerReady}
+        onStateChange={onPlayerStateChange}
         className="w-full h-full"
-        src={src}
-        frameBorder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        title="Youtube Player"
+        iframeClassName="w-full h-full"
       />
     </div>
   );
 }
-

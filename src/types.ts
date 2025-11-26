@@ -61,6 +61,7 @@ export type Album = {
 };
 
 export type QueueItem = {
+  id: string; // Unique ID for this specific queue entry (uuid)
   videoId: string;
   title: string;
   artist: string;

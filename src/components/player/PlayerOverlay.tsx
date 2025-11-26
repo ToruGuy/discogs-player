@@ -150,7 +150,7 @@ export function PlayerOverlay() {
             <div className="hidden md:block w-1/3 border-l p-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-medium text-muted-foreground">
-                  Queue ({queue.length})
+                  Queue ({queueIndex + 1} / {queue.length})
                 </h3>
               </div>
               <ScrollArea className="h-full">

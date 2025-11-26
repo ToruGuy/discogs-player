@@ -18,7 +18,8 @@ export function TopBar() {
       setVolume,
       isPlayerOpen,
       togglePlayerOverlay,
-      queue
+      queue,
+      queueIndex
   } = usePlayer();
 
   const { albums, toggleVideoLike } = useData();
@@ -53,7 +54,7 @@ export function TopBar() {
                     <span className="text-xs text-muted-foreground truncate">
                       {albumToUse.artist}
                       {queue.length > 0 && (
-                        <span className="ml-2 text-primary">• {queue.length} in queue</span>
+                        <span className="ml-2 text-primary">• {queueIndex + 1} / {queue.length}</span>
                       )}
                     </span>
                 </div>

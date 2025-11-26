@@ -33,6 +33,11 @@ const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 const QUEUE_STORAGE_KEY = 'discogs-player-queue';
 const QUEUE_INDEX_STORAGE_KEY = 'discogs-player-queue-index';
 
+// Helper to insert items at specific index
+function insertAt<T>(array: T[], index: number, items: T[]): T[] {
+  return [...array.slice(0, index), ...items, ...array.slice(index)];
+}
+
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const { albums } = useData();
   const [isPlaying, setIsPlaying] = useState(false);
@@ -81,6 +86,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     };
   }, [queue, queueIndex, albums]);
 
+  // Case 2: Play Track (Single Interrupt)
   const playTrack = (album: Album, trackIndex: number) => {
     if (!album.youtube_videos || trackIndex < 0 || trackIndex >= album.youtube_videos.length) {
       return;
@@ -89,45 +95,53 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const item = convertTrackToQueueItem(album, trackIndex);
     if (!item) return;
 
-    // Replace queue with single track and play
-    setQueue([item]);
-    setQueueIndex(0);
+    // If queue is empty, just add it
+    if (queue.length === 0) {
+      setQueue([item]);
+      setQueueIndex(0);
+    } else {
+      // Insert AFTER current track
+      const insertIndex = queueIndex + 1;
+      setQueue(prev => insertAt(prev, insertIndex, [item]));
+      setQueueIndex(insertIndex); // Jump to it
+    }
     setIsPlaying(true);
   };
 
+  // Case 1: Play Album (Interrupt / Play Now)
   const playAlbum = (album: Album) => {
     if (!album.youtube_videos || album.youtube_videos.length === 0) return;
 
     const items = convertAlbumToQueueItems(album);
     if (items.length === 0) return;
 
-    // Replace queue with all album tracks
-    setQueue(items);
-    setQueueIndex(0);
+    // If queue is empty, just add it
+    if (queue.length === 0) {
+      setQueue(items);
+      setQueueIndex(0);
+    } else {
+      // Insert AFTER current track
+      const insertIndex = queueIndex + 1;
+      setQueue(prev => insertAt(prev, insertIndex, items));
+      setQueueIndex(insertIndex); // Jump to start of inserted album
+    }
     setIsPlaying(true);
   };
 
+  // Case 4: Play Next (Insert Album)
   const playAlbumNext = (album: Album) => {
     if (!album.youtube_videos || album.youtube_videos.length === 0) return;
 
     const items = convertAlbumToQueueItems(album);
     if (items.length === 0) return;
 
-    // Insert album after current track
-    setQueue(prev => {
-      if (queueIndex < prev.length) {
-        return [
-          ...prev.slice(0, queueIndex + 1),
-          ...items,
-          ...prev.slice(queueIndex + 1)
-        ];
-      } else {
-        return [...prev, ...items];
-      }
-    });
-    // Don't change queueIndex - current track continues playing
+    // Insert AFTER current track, but DON'T jump
+    const insertIndex = queueIndex + 1;
+    setQueue(prev => insertAt(prev, insertIndex, items));
+    // queueIndex remains same, so we finish current track first
   };
 
+  // Case 3: Add Album to Queue (Append)
   const addAlbumToQueue = (album: Album) => {
     if (!album.youtube_videos || album.youtube_videos.length === 0) return;
 
@@ -136,7 +150,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     // Append to end of queue
     setQueue(prev => [...prev, ...items]);
-    // Don't change queueIndex - current track continues playing
   };
 
   const togglePlay = () => {
@@ -144,36 +157,38 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setIsPlaying(!isPlaying);
   };
 
+  // Case 5: Queue Exhaustion (Collection Auto-Play)
   const nextTrack = () => {
     if (queue.length === 0) return;
 
-    // Check if there's a next item in queue
+    // Normal case: Next item exists in queue
     if (queueIndex + 1 < queue.length) {
       setQueueIndex(prev => prev + 1);
       setIsPlaying(true);
       return;
     }
 
-    // Queue exhausted - check for auto-continuation
+    // Queue Exhausted: Try to find next album in collection
     const lastItem = queue[queueIndex];
-    if (lastItem && lastItem.trackIndex < lastItem.totalTracksInAlbum - 1) {
-      // Auto-add remaining tracks from the same album
-      const album = albums.find(a => a.id === lastItem.albumId);
-      if (album) {
-        const remainingTracks = convertAlbumToQueueItems(
-          album,
-          lastItem.trackIndex + 1
-        );
-        if (remainingTracks.length > 0) {
-          setQueue(prev => [...prev, ...remainingTracks]);
-          setQueueIndex(prev => prev + 1);
-          setIsPlaying(true);
-          return;
-        }
-      }
+    
+    // Find current album index in the main collection
+    const currentAlbumIndex = albums.findIndex(a => a.id === lastItem.albumId);
+    
+    if (currentAlbumIndex !== -1 && currentAlbumIndex + 1 < albums.length) {
+       const nextAlbum = albums[currentAlbumIndex + 1];
+       const nextItems = convertAlbumToQueueItems(nextAlbum);
+       
+       if (nextItems.length > 0) {
+         // Append next album
+         setQueue(prev => [...prev, ...nextItems]);
+         // Advance to it
+         setQueueIndex(prev => prev + 1);
+         setIsPlaying(true);
+         return;
+       }
     }
 
-    // No more tracks - stop playing
+    // If we are here, we really ran out of music
     setIsPlaying(false);
   };
 
@@ -201,18 +216,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const playNow = (items: QueueItem[]) => {
     // Insert items immediately after current track
-    setQueue(prev => {
-      if (queueIndex < prev.length) {
-        return [
-          ...prev.slice(0, queueIndex + 1),
-          ...items,
-          ...prev.slice(queueIndex + 1)
-        ];
-      } else {
-        // If we're at the end, just append
-        return [...prev, ...items];
-      }
-    });
+    const insertIndex = queueIndex + 1;
+    setQueue(prev => insertAt(prev, insertIndex, items));
+    setQueueIndex(insertIndex); // Jump to it
+    setIsPlaying(true);
   };
 
   const removeFromQueue = (index: number) => {
@@ -229,6 +236,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const clearQueue = () => {
     setQueue([]);
     setQueueIndex(0);
+    setIsPlaying(false);
   };
 
   const togglePlayerOverlay = () => {
@@ -272,4 +280,3 @@ export function usePlayer() {
   }
   return context;
 }
-
