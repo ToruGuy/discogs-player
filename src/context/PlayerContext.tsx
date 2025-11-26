@@ -26,6 +26,7 @@ interface PlayerContextType {
   clearQueue: () => void;
   isPlayerOpen: boolean;
   togglePlayerOverlay: () => void;
+  updateQueueItemTitle: (index: number, newTitle: string) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -243,6 +244,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setIsPlayerOpen(prev => !prev);
   };
 
+  const updateQueueItemTitle = (index: number, newTitle: string) => {
+    setQueue(prev => {
+      const newQueue = [...prev];
+      if (newQueue[index]) {
+        newQueue[index] = { ...newQueue[index], title: newTitle };
+      }
+      return newQueue;
+    });
+  };
+
   return (
     <PlayerContext.Provider value={{
       currentAlbum,
@@ -266,7 +277,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       removeFromQueue,
       clearQueue,
       isPlayerOpen,
-      togglePlayerOverlay
+      togglePlayerOverlay,
+      updateQueueItemTitle
     }}>
       {children}
     </PlayerContext.Provider>

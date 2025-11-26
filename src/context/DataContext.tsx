@@ -10,6 +10,7 @@ interface DataContextType {
   toggleLike: (id: number) => Promise<void>;
   toggleVideoLike: (albumId: number, videoIndex: number, action: 'like' | 'dislike') => Promise<void>;
   scrapeUrl: (url: string) => Promise<void>;
+  updateVideoTitle: (albumId: number, videoId: string, newTitle: string) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -124,6 +125,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
   };
 
+  const updateVideoTitle = (albumId: number, videoId: string, newTitle: string) => {
+    setAlbums(prev => prev.map(album => {
+      if (album.id === albumId && album.youtube_videos) {
+        const updatedVideos = album.youtube_videos.map(v => {
+          if (v.youtube_video_id === videoId) {
+            return { ...v, title: newTitle };
+          }
+          return v;
+        });
+        return { ...album, youtube_videos: updatedVideos };
+      }
+      return album;
+    }));
+  };
+
   return (
     <DataContext.Provider value={{
       albums,
@@ -131,7 +147,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       refresh,
       toggleLike,
       toggleVideoLike,
-      scrapeUrl
+      scrapeUrl,
+      updateVideoTitle
     }}>
       {children}
     </DataContext.Provider>
