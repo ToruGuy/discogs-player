@@ -27,6 +27,13 @@ interface PlayerContextType {
   isPlayerOpen: boolean;
   togglePlayerOverlay: () => void;
   updateQueueItemTitle: (index: number, newTitle: string) => void;
+  progress: number;
+  duration: number;
+  setProgress: (progress: number) => void;
+  setDuration: (duration: number) => void;
+  seekTo: (time: number) => void;
+  seekRequest: number | null;
+  isSeeking: boolean;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -52,6 +59,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return stored ? parseInt(stored, 10) : 0;
   });
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [seekRequest, setSeekRequest] = useState<number | null>(null);
+  const [isSeeking, setIsSeeking] = useState(false);
 
   // Persist queue to localStorage
   useEffect(() => {
@@ -254,6 +265,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const seekTo = (time: number) => {
+    setSeekRequest(time);
+    setProgress(time); // Optimistic update
+    setIsSeeking(true);
+    
+    // Reset seeking state after a short delay to allow player to catch up
+    setTimeout(() => {
+      setIsSeeking(false);
+    }, 1000);
+  };
+
   return (
     <PlayerContext.Provider value={{
       currentAlbum,
@@ -278,7 +300,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       clearQueue,
       isPlayerOpen,
       togglePlayerOverlay,
-      updateQueueItemTitle
+      updateQueueItemTitle,
+      progress,
+      duration,
+      setProgress,
+      setDuration,
+      seekTo,
+      seekRequest,
+      isSeeking
     }}>
       {children}
     </PlayerContext.Provider>

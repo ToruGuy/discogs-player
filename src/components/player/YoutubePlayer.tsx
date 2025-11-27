@@ -12,10 +12,46 @@ export function YoutubePlayer() {
     nextTrack, 
     queueIndex, 
     updateQueueItemTitle, 
-    queue 
+    queue,
+    setProgress,
+    setDuration,
+    seekRequest,
+    isSeeking
   } = usePlayer();
   const { updateVideoTitle } = useData();
   const playerRef = useRef<any>(null);
+  const lastSeekRef = useRef<number | null>(null);
+
+  // Handle seek requests
+  useEffect(() => {
+    if (seekRequest !== null && seekRequest !== lastSeekRef.current && playerRef.current) {
+      playerRef.current.seekTo(seekRequest, true);
+      lastSeekRef.current = seekRequest;
+    }
+  }, [seekRequest]);
+
+  // Poll for progress
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isPlaying && playerRef.current && !isSeeking) {
+      interval = setInterval(() => {
+        try {
+          const currentTime = playerRef.current.getCurrentTime();
+          const duration = playerRef.current.getDuration();
+          
+          if (typeof currentTime === 'number') setProgress(currentTime);
+          if (typeof duration === 'number' && duration > 0) setDuration(duration);
+        } catch (e) {
+          // Ignore errors if player not ready
+        }
+      }, 500);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isPlaying, setProgress, setDuration, isSeeking]);
 
   // Sync play/pause state
   // MOVED UP: Hooks must be called unconditionally

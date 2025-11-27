@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Play, Pause, SkipBack, SkipForward, ThumbsUp, ThumbsDown, Plus, Heart, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -17,10 +18,18 @@ export function TopBar() {
       togglePlayerOverlay,
       queue,
       queueIndex,
-      currentVideo
+      currentVideo,
+      progress,
+      duration,
+      seekTo
   } = usePlayer();
 
   const { albums, toggleVideoLike } = useData();
+  
+  // Local state for dragging
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragProgress, setDragProgress] = useState(0);
+  const progressBarRef = useRef<HTMLDivElement>(null);
 
   // Get the latest album data from DataContext to ensure we have up-to-date interactions
   const latestAlbum = currentAlbum ? albums.find(a => a.id === currentAlbum.id) : null;
@@ -33,8 +42,51 @@ export function TopBar() {
   const isLiked = videoInteraction?.interaction_type === 'liked';
   const isDisliked = videoInteraction?.interaction_type === 'disliked';
 
+  // Calculate display percentage: use drag value if dragging, otherwise use actual player progress
+  const currentProgress = isDragging ? dragProgress : progress;
+  const progressPercentage = duration > 0 ? (currentProgress / duration) * 100 : 0;
+
+  const calculateProgress = (clientX: number) => {
+    if (!progressBarRef.current || !duration) return 0;
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, x / rect.width));
+    return percentage * duration;
+  };
+
+  const handleSeekStart = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!duration) return;
+    setIsDragging(true);
+    const newProgress = calculateProgress(e.clientX);
+    setDragProgress(newProgress);
+  };
+
+  // Handle global mouse up/move for dragging
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newProgress = calculateProgress(e.clientX);
+      setDragProgress(newProgress);
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      setIsDragging(false);
+      const finalProgress = calculateProgress(e.clientX);
+      seekTo(finalProgress);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, duration, seekTo]);
+
   return (
-    <div className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 grid grid-cols-3 items-center px-4 select-none drag-region">
+    <div className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 grid grid-cols-3 items-center px-4 select-none drag-region relative group">
       
       {/* Left: App Title & Track Info */}
       <div className="flex items-center justify-start gap-8 pr-6 relative min-w-0">
@@ -155,6 +207,25 @@ export function TopBar() {
              <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hidden md:flex">
               <Heart className="h-4 w-4" />
             </Button>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div 
+        ref={progressBarRef}
+        className="absolute bottom-0 left-0 right-0 h-[3px] group-hover:h-[6px] transition-all duration-200 cursor-pointer z-10"
+        onMouseDown={handleSeekStart}
+      >
+        {/* Background Track */}
+        <div className="absolute inset-0 bg-muted/20 group-hover:bg-muted/40 transition-colors" /> 
+        
+        {/* Progress Fill */}
+        <div 
+          className={`h-full bg-primary/80 group-hover:bg-primary relative ${isDragging ? 'transition-none' : 'transition-all duration-300 ease-linear'}`}
+          style={{ width: `${progressPercentage}%` }}
+        >
+           {/* Scrubber Handle (Only visible on hover or dragging) */}
+           <div className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-primary rounded-full shadow-md transition-opacity ${isDragging ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
         </div>
       </div>
     </div>
