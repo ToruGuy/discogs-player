@@ -7,7 +7,6 @@ interface PlayerContextType {
   currentAlbum: Album | null;
   currentTrackIndex: number;
   isPlaying: boolean;
-  volume: number;
   playTrack: (album: Album, trackIndex: number) => void;
   playAlbum: (album: Album) => void;
   playAlbumNext: (album: Album) => void;
@@ -16,7 +15,6 @@ interface PlayerContextType {
   nextTrack: () => void;
   prevTrack: () => void;
   jumpToQueueIndex: (index: number) => void;
-  setVolume: (volume: number) => void;
   currentVideo: YoutubeVideo | null;
   queue: QueueItem[];
   queueIndex: number;
@@ -49,7 +47,6 @@ function insertAt<T>(array: T[], index: number, items: T[]): T[] {
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const { albums } = useData();
   const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(33);
   const [queue, setQueue] = useState<QueueItem[]>(() => {
     const stored = localStorage.getItem(QUEUE_STORAGE_KEY);
     return stored ? JSON.parse(stored) : [];
@@ -281,7 +278,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       currentAlbum,
       currentTrackIndex,
       isPlaying,
-      volume,
       playTrack,
       playAlbum,
       playAlbumNext,
@@ -290,7 +286,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       nextTrack,
       prevTrack,
       jumpToQueueIndex,
-      setVolume,
       currentVideo,
       queue,
       queueIndex,
