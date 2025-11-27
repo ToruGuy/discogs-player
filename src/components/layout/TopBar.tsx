@@ -41,7 +41,10 @@ export function TopBar() {
         <div className="font-bold text-xl tracking-tight shrink-0 hidden xl:block">Discogs Player</div>
         
         {albumToUse && (
-           <div className="flex items-center gap-3 overflow-hidden opacity-100 transition-opacity text-left">
+           <div 
+             className="flex items-center gap-3 overflow-hidden opacity-100 transition-opacity text-left cursor-pointer hover:opacity-80"
+             onClick={togglePlayerOverlay}
+           >
                 <div className="h-10 w-10 bg-muted rounded-md border border-border/50 shrink-0 overflow-hidden">
                     <img src={albumToUse.image_url} alt="Cover" className="w-full h-full object-cover" />
                 </div>
