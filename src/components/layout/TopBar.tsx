@@ -19,7 +19,8 @@ export function TopBar() {
       isPlayerOpen,
       togglePlayerOverlay,
       queue,
-      queueIndex
+      queueIndex,
+      currentVideo
   } = usePlayer();
 
   const { albums, toggleVideoLike } = useData();
@@ -36,39 +37,31 @@ export function TopBar() {
   const isDisliked = videoInteraction?.interaction_type === 'disliked';
 
   return (
-    <div className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center px-4 justify-between select-none drag-region">
-      {/* Left: App Title / Home */}
-      <div className="flex items-center gap-2 w-64">
-        <div className="font-bold text-xl tracking-tight">Discogs Player</div>
-      </div>
-
-      {/* Center: Player Controls (The Deck) */}
-      <div className="flex-1 flex items-center justify-center gap-6">
+    <div className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 grid grid-cols-3 items-center px-4 select-none drag-region">
+      
+      {/* Left: App Title & Track Info */}
+      <div className="flex items-center justify-start gap-8 pr-6 relative min-w-0">
+        <div className="font-bold text-xl tracking-tight shrink-0 hidden xl:block">Discogs Player</div>
         
-        {/* Track Info (Mini) */}
-        <div className="flex items-center gap-3 w-64 justify-end text-right hidden md:flex opacity-100 transition-opacity">
-           {albumToUse ? (
-               <>
-                <div className="flex flex-col overflow-hidden">
-                    <span className="text-sm font-medium truncate">{albumToUse.title}</span>
-                    <span className="text-xs text-muted-foreground truncate">
-                      {albumToUse.artist}
-                      {queue.length > 0 && (
-                        <span className="ml-2 text-primary">• {queueIndex + 1} / {queue.length}</span>
-                      )}
-                    </span>
-                </div>
-                <div className="h-10 w-10 bg-muted rounded-md border border-border/50 overflow-hidden">
+        {albumToUse && (
+           <div className="flex items-center gap-3 overflow-hidden opacity-100 transition-opacity text-left">
+                <div className="h-10 w-10 bg-muted rounded-md border border-border/50 shrink-0 overflow-hidden">
                     <img src={albumToUse.image_url} alt="Cover" className="w-full h-full object-cover" />
                 </div>
-               </>
-           ) : (
-               <span className="text-xs text-muted-foreground">Select a record...</span>
-           )}
-        </div>
+                <div className="flex flex-col overflow-hidden min-w-0">
+                    <span className="text-sm font-medium truncate" title={currentVideo?.title || albumToUse.title}>
+                        {currentVideo?.title || albumToUse.title}
+                    </span>
+                    <span className="text-xs text-muted-foreground truncate">
+                      {albumToUse.artist} • {albumToUse.title}
+                    </span>
+                </div>
+           </div>
+        )}
+      </div>
 
-        {/* Transport */}
-        <div className="flex items-center gap-2">
+      {/* Center: Transport Controls (Always Centered) */}
+      <div className="flex items-center justify-center gap-2">
           <Button variant="ghost" size="icon" className="h-10 w-10" onClick={prevTrack} disabled={!albumToUse}>
             <SkipBack className="h-5 w-5" />
           </Button>
@@ -86,79 +79,92 @@ export function TopBar() {
           <Button variant="ghost" size="icon" className="h-10 w-10" onClick={nextTrack} disabled={!albumToUse}>
             <SkipForward className="h-5 w-5" />
           </Button>
-        </div>
-
-        {/* Feedback */}
-        <div className="flex items-center gap-1">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className={`h-9 w-9 transition-colors ${isDisliked ? 'text-destructive' : 'text-muted-foreground hover:text-destructive'}`}
-            disabled={!albumToUse || currentTrackIndex === undefined}
-            onClick={() => {
-              if (albumToUse && currentTrackIndex !== undefined) {
-                toggleVideoLike(albumToUse.id, currentTrackIndex, 'dislike');
-              }
-            }}
-          >
-            <ThumbsDown className={`h-4 w-4 transition-all ${isDisliked ? 'fill-current' : ''}`} />
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className={`h-9 w-9 transition-colors ${isLiked ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
-            disabled={!albumToUse || currentTrackIndex === undefined}
-            onClick={() => {
-              if (albumToUse && currentTrackIndex !== undefined) {
-                toggleVideoLike(albumToUse.id, currentTrackIndex, 'like');
-              }
-            }}
-          >
-            <ThumbsUp className={`h-4 w-4 transition-all ${isLiked ? 'fill-current' : ''}`} />
-          </Button>
-        </div>
-
-        {/* Volume Scrubber */}
-        <div className="w-24 hidden lg:block group">
-           <Slider 
-              value={[volume]} 
-              onValueChange={(val) => setVolume(val[0])} 
-              max={100} 
-              step={1} 
-              className="w-full" 
-            />
-        </div>
-
-        {/* Expand/Collapse Player Overlay */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9"
-          onClick={togglePlayerOverlay}
-          disabled={!albumToUse}
-        >
-          {isPlayerOpen ? (
-            <ChevronUp className="h-4 w-4" />
-          ) : (
-            <ChevronDown className="h-4 w-4" />
-          )}
-        </Button>
       </div>
 
-      {/* Right: Quick Actions */}
-      <div className="flex items-center gap-2 w-64 justify-end">
-        <ImportDialog 
-          trigger={
-            <Button variant="outline" size="icon" className="h-9 w-9">
-              <Plus className="h-4 w-4" />
+      {/* Right: Actions & Status */}
+      <div className="flex items-center justify-end gap-4 pl-6 min-w-0">
+        
+        <div className="flex items-center gap-2 lg:gap-4">
+            {/* Feedback (Moved to right) */}
+            <div className="flex items-center gap-1">
+            <Button 
+                variant="ghost" 
+                size="icon" 
+                className={`h-9 w-9 transition-colors ${isDisliked ? 'text-destructive' : 'text-muted-foreground hover:text-destructive'}`}
+                disabled={!albumToUse || currentTrackIndex === undefined}
+                onClick={() => {
+                if (albumToUse && currentTrackIndex !== undefined) {
+                    toggleVideoLike(albumToUse.id, currentTrackIndex, 'dislike');
+                }
+                }}
+            >
+                <ThumbsDown className={`h-4 w-4 transition-all ${isDisliked ? 'fill-current' : ''}`} />
             </Button>
-          }
-        />
-        <Separator orientation="vertical" className="h-6 mx-1" />
-         <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground">
-          <Heart className="h-4 w-4" />
-        </Button>
+            
+            <Button 
+                variant="ghost" 
+                size="icon" 
+                className={`h-9 w-9 transition-colors ${isLiked ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
+                disabled={!albumToUse || currentTrackIndex === undefined}
+                onClick={() => {
+                if (albumToUse && currentTrackIndex !== undefined) {
+                    toggleVideoLike(albumToUse.id, currentTrackIndex, 'like');
+                }
+                }}
+            >
+                <ThumbsUp className={`h-4 w-4 transition-all ${isLiked ? 'fill-current' : ''}`} />
+            </Button>
+            </div>
+
+            {/* Volume */}
+            <div className="w-24 hidden lg:block group">
+            <Slider 
+                value={[volume]} 
+                onValueChange={(val) => setVolume(val[0])} 
+                max={100} 
+                step={1} 
+                className="w-full" 
+                />
+            </div>
+
+            {/* Queue & Expand */}
+            <div className="flex items-center">
+                {queue.length > 0 && (
+                    <span className="text-xs font-mono text-muted-foreground mr-2 hidden xl:block whitespace-nowrap">
+                        {queueIndex + 1} / {queue.length}
+                    </span>
+                )}
+                <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+                onClick={togglePlayerOverlay}
+                disabled={!albumToUse}
+                >
+                {isPlayerOpen ? (
+                    <ChevronUp className="h-4 w-4" />
+                ) : (
+                    <ChevronDown className="h-4 w-4" />
+                )}
+                </Button>
+            </div>
+        </div>
+
+        <div className="flex items-center gap-1">
+            <Separator orientation="vertical" className="h-6 mx-1 hidden md:block" />
+            
+            {/* Extra Actions */}
+            <ImportDialog 
+              trigger={
+                <Button variant="outline" size="icon" className="h-9 w-9">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              }
+            />
+             <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hidden md:flex">
+              <Heart className="h-4 w-4" />
+            </Button>
+        </div>
       </div>
     </div>
   );

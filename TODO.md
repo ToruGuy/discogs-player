@@ -11,10 +11,13 @@
     - Load on app startup.
   - Reference: `docs/queue_logic.md` (Lines 105-112).
 
-- [ ] **Queue Visualization**
-  - Add UI to show `queue.length` and `queueIndex`.
-  - Visualize "History" vs "Up Next".
+- [x] **Queue Visualization**
+  - Added `X / N` counter to TopBar and PlayerOverlay.
 
 - [ ] **Drag & Drop Reordering**
   - Allow users to reorder the "Up Next" list.
 
+- [ ] **Scrape Video Titles**
+  - Currently, we auto-patch titles at runtime when playing.
+  - Goal: Implement a background scraper or explicit action to fetch and save accurate video titles to the database permanently.
+  - This avoids the "Generic Title" issue for unplayed tracks.
