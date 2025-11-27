@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
 import { usePlayer } from '@/context/PlayerContext';
+import { useData } from '@/context/DataContext';
 import { YoutubePlayer } from './YoutubePlayer';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { X, Trash2, Play, Pause, SkipBack, SkipForward } from 'lucide-react';
+import { X, Trash2, Play, Pause, SkipBack, SkipForward, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function PlayerOverlay() {
@@ -19,8 +20,22 @@ export function PlayerOverlay() {
     nextTrack,
     prevTrack,
     jumpToQueueIndex,
-    currentAlbum
+    currentAlbum,
+    currentTrackIndex
   } = usePlayer();
+
+  const { albums, toggleVideoLike } = useData();
+
+  // Get the latest album data from DataContext to ensure we have up-to-date interactions
+  const latestAlbum = currentAlbum ? albums.find(a => a.id === currentAlbum.id) : null;
+  const albumToUse = latestAlbum || currentAlbum;
+
+  const videoInteraction = albumToUse?.user_interactions?.find(
+    i => i.video_index === currentTrackIndex &&
+    (i.interaction_type === 'liked' || i.interaction_type === 'disliked')
+  );
+  const isLiked = videoInteraction?.interaction_type === 'liked';
+  const isDisliked = videoInteraction?.interaction_type === 'disliked';
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -86,6 +101,37 @@ export function PlayerOverlay() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {/* Feedback Controls */}
+              <div className="flex items-center gap-1 mr-2">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={`h-9 w-9 transition-colors ${isDisliked ? 'text-destructive' : 'text-muted-foreground hover:text-destructive'}`}
+                  disabled={!albumToUse || currentTrackIndex === undefined}
+                  onClick={() => {
+                    if (albumToUse && currentTrackIndex !== undefined) {
+                      toggleVideoLike(albumToUse.id, currentTrackIndex, 'dislike');
+                    }
+                  }}
+                >
+                  <ThumbsDown className={`h-4 w-4 transition-all ${isDisliked ? 'fill-current' : ''}`} />
+                </Button>
+                
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={`h-9 w-9 transition-colors ${isLiked ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
+                  disabled={!albumToUse || currentTrackIndex === undefined}
+                  onClick={() => {
+                    if (albumToUse && currentTrackIndex !== undefined) {
+                      toggleVideoLike(albumToUse.id, currentTrackIndex, 'like');
+                    }
+                  }}
+                >
+                  <ThumbsUp className={`h-4 w-4 transition-all ${isLiked ? 'fill-current' : ''}`} />
+                </Button>
+              </div>
+
               {/* Playback Controls */}
               <div className="flex items-center gap-1 mr-2">
                 <Button
