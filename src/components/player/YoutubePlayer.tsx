@@ -1,7 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import YouTube from 'react-youtube';
-// remove type import if it causes issues, or keep if resolved
-// import type { YouTubeProps } from 'react-youtube'; 
 import { usePlayer } from '@/context/PlayerContext';
 import { useData } from '@/context/DataContext';
 
@@ -21,6 +19,7 @@ export function YoutubePlayer() {
   const { updateVideoTitle } = useData();
   const playerRef = useRef<any>(null);
   const lastSeekRef = useRef<number | null>(null);
+  const requestRef = useRef<number>();
 
   // Handle seek requests
   useEffect(() => {
@@ -30,31 +29,34 @@ export function YoutubePlayer() {
     }
   }, [seekRequest]);
 
-  // Poll for progress
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (isPlaying && playerRef.current && !isSeeking) {
-      interval = setInterval(() => {
-        try {
-          const currentTime = playerRef.current.getCurrentTime();
-          const duration = playerRef.current.getDuration();
-          
-          if (typeof currentTime === 'number') setProgress(currentTime);
-          if (typeof duration === 'number' && duration > 0) setDuration(duration);
-        } catch (e) {
-          // Ignore errors if player not ready
-        }
-      }, 500);
+  // RAF for progress
+  const updateProgress = useCallback(() => {
+    if (playerRef.current && isPlaying && !isSeeking) {
+      try {
+        const currentTime = playerRef.current.getCurrentTime();
+        const duration = playerRef.current.getDuration();
+        
+        if (typeof currentTime === 'number') setProgress(currentTime);
+        if (typeof duration === 'number' && duration > 0) setDuration(duration);
+      } catch (e) {
+        // Ignore errors
+      }
     }
+    requestRef.current = requestAnimationFrame(updateProgress);
+  }, [isPlaying, isSeeking, setProgress, setDuration]);
 
+  useEffect(() => {
+    if (isPlaying) {
+      requestRef.current = requestAnimationFrame(updateProgress);
+    } else {
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+    }
     return () => {
-      if (interval) clearInterval(interval);
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
     };
-  }, [isPlaying, setProgress, setDuration, isSeeking]);
+  }, [isPlaying, updateProgress]);
 
   // Sync play/pause state
-  // MOVED UP: Hooks must be called unconditionally
   useEffect(() => {
     if (playerRef.current) {
       if (isPlaying) {
@@ -75,15 +77,9 @@ export function YoutubePlayer() {
         const realTitle = data.title;
         const currentQueueItem = queue[queueIndex];
         
-        // Update if title is missing or generic (fallback) or just different
-        // We assume YouTube title is the source of truth
         if (currentQueueItem && currentQueueItem.title !== realTitle) {
-             console.log(`Updating title: "${currentQueueItem.title}" -> "${realTitle}"`);
-             
-             // Update Queue (Immediate UI)
+             // console.log(`Updating title: "${currentQueueItem.title}" -> "${realTitle}"`);
              updateQueueItemTitle(queueIndex, realTitle);
-             
-             // Update Data Context (Persist for session)
              if (currentQueueItem.albumId) {
                  updateVideoTitle(currentQueueItem.albumId, currentVideo.youtube_video_id, realTitle);
              }
@@ -96,7 +92,6 @@ export function YoutubePlayer() {
     if (isPlaying) {
       event.target.playVideo();
     }
-    // Try to get title on load
     checkAndUpdateTitle(event.target);
   };
 
@@ -108,7 +103,6 @@ export function YoutubePlayer() {
 
     // State 0 is ended
     if (event.data === 0) {
-      console.log("Track ended, playing next...");
       nextTrack();
     }
   };
@@ -120,14 +114,13 @@ export function YoutubePlayer() {
       autoplay: isPlaying ? 1 : 0,
       controls: 1,
       modestbranding: 1,
-      origin: window.location.origin, // Important for API access
+      origin: window.location.origin,
     },
   };
 
   return (
     <div className="w-full h-full bg-black">
       <YouTube
-        key={currentVideo.youtube_video_id} // Force remount on video change to ensure clean state
         videoId={currentVideo.youtube_video_id}
         opts={opts}
         onReady={onPlayerReady}

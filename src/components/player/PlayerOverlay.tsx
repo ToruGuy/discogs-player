@@ -1,10 +1,9 @@
 import { useEffect } from 'react';
 import { usePlayer } from '@/context/PlayerContext';
 import { useData } from '@/context/DataContext';
-import { YoutubePlayer } from './YoutubePlayer';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { X, Trash2, Play, Pause, SkipBack, SkipForward, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { X, Trash2, Play, Pause, SkipBack, SkipForward, ThumbsUp, ThumbsDown, Disc } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function PlayerOverlay() {
@@ -185,10 +184,21 @@ export function PlayerOverlay() {
 
           {/* Content Area */}
           <div className="flex-1 flex overflow-hidden">
-            {/* Left: YouTube Player */}
+            {/* Left: Visuals (was YouTube Player) */}
             <div className="w-full md:w-2/3 p-4 flex items-center justify-center bg-muted/30">
-              <div className="w-full max-w-2xl aspect-video">
-                <YoutubePlayer />
+              <div className="w-full max-w-2xl aspect-square md:aspect-video flex items-center justify-center shadow-2xl rounded-lg overflow-hidden bg-black">
+                 {currentAlbum ? (
+                   <img 
+                     src={currentAlbum.image_url} 
+                     alt={currentAlbum.title} 
+                     className="w-full h-full object-contain"
+                   />
+                 ) : (
+                   <div className="text-muted-foreground flex flex-col items-center gap-2">
+                      <Disc className="h-12 w-12 opacity-20" />
+                      <span>No Media Playing</span>
+                   </div>
+                 )}
               </div>
             </div>
 
@@ -209,7 +219,7 @@ export function PlayerOverlay() {
                   <div className="space-y-2">
                     {queue.map((item, index) => (
                       <div
-                        key={`${item.albumId}-${item.videoId}-${index}`}
+                        key={item.id}
                         className={cn(
                           "flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer",
                           index === queueIndex
@@ -257,4 +267,3 @@ export function PlayerOverlay() {
     </>
   );
 }
-
