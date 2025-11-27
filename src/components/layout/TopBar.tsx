@@ -1,6 +1,5 @@
 import { Play, Pause, SkipBack, SkipForward, ThumbsUp, ThumbsDown, Plus, Heart, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { ImportDialog } from "@/components/ImportDialog";
 import { usePlayer } from "@/context/PlayerContext";
@@ -14,8 +13,6 @@ export function TopBar() {
       togglePlay, 
       nextTrack, 
       prevTrack, 
-      volume, 
-      setVolume,
       isPlayerOpen,
       togglePlayerOverlay,
       queue,
@@ -116,17 +113,8 @@ export function TopBar() {
             </Button>
             </div>
 
-            {/* Volume */}
-            <div className="w-24 hidden lg:block group">
-            <Slider 
-                value={[volume]} 
-                onValueChange={(val) => setVolume(val[0])} 
-                max={100} 
-                step={1} 
-                className="w-full" 
-                />
-            </div>
-
+            {/* Volume (Removed) */}
+            
             {/* Queue & Expand */}
             <div className="flex items-center">
                 {queue.length > 0 && (
