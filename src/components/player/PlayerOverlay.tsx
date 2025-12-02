@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { X, Trash2, Play, Pause, SkipBack, SkipForward, ThumbsUp, ThumbsDown, Disc, Album, Youtube, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { openExternalLink } from '@/lib/external-links';
+import { YoutubePlayer } from './YoutubePlayer';
 
 export function PlayerOverlay() {
   const navigate = useNavigate();
@@ -187,15 +188,11 @@ export function PlayerOverlay() {
 
           {/* Content Area */}
           <div className="flex-1 flex overflow-hidden min-w-0">
-            {/* Left: Visuals (was YouTube Player) */}
+            {/* Left: YouTube Player */}
             <div className="flex-1 min-w-0 p-4 flex flex-col items-center justify-center bg-muted/30 gap-4">
-              <div className="w-full max-w-2xl aspect-square md:aspect-video flex items-center justify-center shadow-2xl rounded-lg overflow-hidden bg-black">
-                 {currentAlbum ? (
-                   <img 
-                     src={currentAlbum.image_url} 
-                     alt={currentAlbum.title} 
-                     className="w-full h-full object-contain"
-                   />
+              <div className="w-full max-w-2xl aspect-video flex items-center justify-center shadow-2xl rounded-lg overflow-hidden bg-black">
+                 {currentVideo ? (
+                   <YoutubePlayer />
                  ) : (
                    <div className="text-muted-foreground flex flex-col items-center gap-2">
                       <Disc className="h-12 w-12 opacity-20" />

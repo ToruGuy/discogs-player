@@ -1,7 +1,6 @@
 import { TopBar } from "./TopBar";
 import { RightSidebar } from "./RightSidebar";
 import { PlayerOverlay } from "@/components/player/PlayerOverlay";
-import { YoutubePlayer } from "@/components/player/YoutubePlayer";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -26,11 +25,6 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Player Overlay */}
       <PlayerOverlay />
-      
-      {/* Invisible Audio Player */}
-      <div className="fixed bottom-0 right-0 w-px h-px opacity-0 pointer-events-none overflow-hidden">
-         <YoutubePlayer />
-      </div>
     </div>
   );
 }
