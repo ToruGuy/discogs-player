@@ -3,6 +3,11 @@
   "productName": "discogs-player",
   "version": "0.1.0",
   "identifier": "com.discogs-player.app",
+  "plugins": {
+    "sql": {
+      "preload": ["sqlite:discogs.db"]
+    }
+  },
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { Album } from '@/types';
 import { api } from '@/services/api';
+import { dbService } from '@/services/db';
 import { toast } from 'sonner';
 
 interface DataContextType {
@@ -22,7 +23,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const refresh = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await api.getAlbums();
+      // Try loading from DB first
+      let data = await dbService.getAllAlbums();
+      
+      if (data.length === 0) {
+        // Fallback to mock data/API if DB is empty
+        console.log("DB empty, falling back to mock API");
+        const apiData = await api.getAlbums();
+        // Seed DB with mock data
+        for (const album of apiData) {
+          await dbService.saveAlbum(album);
+        }
+        data = await dbService.getAllAlbums();
+      }
+      
       setAlbums(data);
     } catch (error) {
       console.error("Failed to fetch albums", error);
@@ -39,13 +53,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const toggleLike = async (id: number) => {
     try {
+      // Find the album to get its string ID (since we're moving to string IDs in DB but keeping number in UI for now)
+      const album = albums.find(a => a.id === id);
+      if (!album) return;
+
       const isNowLiked = await api.toggleLike(id);
+      // Also update DB
+      await dbService.toggleLike(album.discogs_release_id, isNowLiked);
       
       // Optimistic update
-      setAlbums(prev => prev.map(album => {
-        if (album.id === id) {
+      setAlbums(prev => prev.map(alb => {
+        if (alb.id === id) {
              // Create a new interaction list
-             const interactions = album.user_interactions ? [...album.user_interactions] : [];
+             const interactions = alb.user_interactions ? [...alb.user_interactions] : [];
              
              if (isNowLiked) {
                  interactions.push({ 
@@ -59,9 +79,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                  toast.info("Removed from Bag");
              }
              
-             return { ...album, user_interactions: interactions };
+             return { ...alb, user_interactions: interactions };
         }
-        return album;
+        return alb;
       }));
 
     } catch (error) {
@@ -162,4 +182,3 @@ export function useData() {
   }
   return context;
 }
-
