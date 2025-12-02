@@ -1,5 +1,6 @@
 import { TopBar } from "./TopBar";
 import { RightSidebar } from "./RightSidebar";
+import { PlayerOverlay } from "@/components/player/PlayerOverlay";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -21,7 +22,9 @@ export function MainLayout({ children }: MainLayoutProps) {
         {/* Navigation Sidebar (Right) */}
         <RightSidebar />
       </div>
+
+      {/* Player Overlay */}
+      <PlayerOverlay />
     </div>
   );
 }
-

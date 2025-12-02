@@ -59,3 +59,16 @@ export type Album = {
   collection_items: CollectionItem[];
   user_interactions: UserInteraction[];
 };
+
+export type QueueItem = {
+  id: string; // Unique ID for this specific queue entry (uuid)
+  videoId: string;
+  title: string;
+  artist: string;
+  albumId: number;
+  albumTitle: string;
+  albumImageUrl: string;
+  trackIndex: number;  // Position in album's youtube_videos array (0-based)
+  totalTracksInAlbum: number;  // Total number of tracks in the source album
+  source: 'album' | 'playlist' | 'manual';
+};

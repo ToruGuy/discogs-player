@@ -2,19 +2,27 @@ import type { Album } from "@/types";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Play, ExternalLink, Pause, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Play, ExternalLink, Pause, ThumbsUp, ThumbsDown, MoreVertical, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePlayer } from "@/context/PlayerContext";
-import { useData } from "@/context/DataContext";
 import { cn } from "@/lib/utils";
 import { openExternalLink } from "@/lib/external-links";
+import { toast } from "sonner";
 
 interface AlbumCardProps {
     album: Album;
 }
 
 export function AlbumCard({ album }: AlbumCardProps) {
-    const { playAlbum, currentAlbum, isPlaying, togglePlay } = usePlayer();
+    const { 
+        playAlbum, 
+        playAlbumNext,
+        addAlbumToQueue,
+        currentAlbum, 
+        isPlaying, 
+        togglePlay
+    } = usePlayer();
     
     const hasYoutubeVideos = album.youtube_videos && album.youtube_videos.length > 0;
     const mainCollectionItem = album.collection_items?.[0];
@@ -42,6 +50,34 @@ export function AlbumCard({ album }: AlbumCardProps) {
         }
     };
 
+    const handleAddToQueue = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!hasYoutubeVideos) {
+            toast.error("No audio available");
+            return;
+        }
+        
+        addAlbumToQueue(album);
+        const itemCount = album.youtube_videos?.length || 0;
+        toast.success(`Added ${itemCount} track${itemCount > 1 ? 's' : ''} to queue`);
+    };
+
+    const handlePlayNow = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!hasYoutubeVideos) {
+            toast.error("No audio available");
+            return;
+        }
+        
+        playAlbumNext(album);
+        const itemCount = album.youtube_videos?.length || 0;
+        toast.success(`Added ${itemCount} track${itemCount > 1 ? 's' : ''} to play next`);
+    };
+
     const handleExternalLink = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -59,7 +95,7 @@ export function AlbumCard({ album }: AlbumCardProps) {
         />
         
         {/* Hover Overlay / Active State */}
-        <div className={cn("absolute inset-0 bg-black/40 transition-opacity flex items-center justify-center gap-4", 
+        <div className={cn("absolute inset-0 bg-black/40 transition-opacity flex items-center justify-center gap-2", 
             isCurrentAlbum ? "opacity-100" : "opacity-0 group-hover:opacity-100"
         )}>
             <Button 
@@ -71,14 +107,51 @@ export function AlbumCard({ album }: AlbumCardProps) {
             >
                 {isCurrentAlbum && isPlaying ? <Pause className="h-6 w-6 ml-1" /> : <Play className="h-6 w-6 ml-1" />}
             </Button>
-            <Button 
-                size="icon" 
-                variant="outline" 
-                className="rounded-full h-10 w-10"
-                onClick={handleExternalLink}
-            >
-                <ExternalLink className="h-4 w-4" />
-            </Button>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button 
+                        size="icon" 
+                        variant="outline" 
+                        className="rounded-full h-10 w-10"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <MoreVertical className="h-4 w-4" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex flex-col gap-1">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="justify-start"
+                            disabled={!hasYoutubeVideos}
+                            onClick={handlePlayNow}
+                        >
+                            <Play className="h-4 w-4 mr-2" />
+                            Play Next
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="justify-start"
+                            disabled={!hasYoutubeVideos}
+                            onClick={handleAddToQueue}
+                        >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add to Queue
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="justify-start"
+                            onClick={handleExternalLink}
+                        >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Open in Discogs
+                        </Button>
+                    </div>
+                </PopoverContent>
+            </Popover>
         </div>
 
             {/* Status Badges */}

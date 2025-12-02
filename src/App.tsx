@@ -8,7 +8,6 @@ import { CollectionView } from "@/views/CollectionView";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { PlayerProvider } from "@/context/PlayerContext";
 import { DataProvider } from "@/context/DataContext";
-import { YoutubePlayer } from "@/components/player/YoutubePlayer";
 import { Toaster } from "@/components/ui/sonner";
 
 console.log('📱 App.tsx is loading...');
@@ -31,7 +30,6 @@ function App() {
                     <Route path="/collections" element={<CollectionView />} />
                     <Route path="/collection/:id" element={<DiggingView />} />
                 </Routes>
-                <YoutubePlayer />
                 <Toaster />
             </MainLayout>
             </Router>

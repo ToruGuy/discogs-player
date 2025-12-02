@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Play, ExternalLink, Pause, Disc, Clock, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Play, ExternalLink, Pause, Disc, Clock, ThumbsUp, ThumbsDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { openExternalLink } from "@/lib/external-links";
@@ -16,7 +16,16 @@ export function FocusView() {
   const { id } = useParams();
   const location = useLocation();
   const { albums, toggleVideoLike } = useData();
-  const { playAlbum, currentAlbum, isPlaying, togglePlay, currentVideo } = usePlayer();
+  const { 
+    playTrack,
+    playAlbum, 
+    playAlbumNext,
+    addAlbumToQueue,
+    currentAlbum, 
+    isPlaying, 
+    togglePlay, 
+    currentVideo 
+  } = usePlayer();
   
   const [viewAlbum, setViewAlbum] = useState<Album | null>(null);
 
@@ -59,23 +68,45 @@ export function FocusView() {
                      <Button 
                         size="icon" 
                         className="h-20 w-20 rounded-full bg-primary text-primary-foreground hover:scale-105 transition-transform"
-                        onClick={() => isCurrentlyPlayingAlbum ? togglePlay() : (hasVideos ? playAlbum(viewAlbum, 0) : toast.error("No audio"))}
+                        onClick={() => isCurrentlyPlayingAlbum ? togglePlay() : (hasVideos ? playAlbum(viewAlbum) : toast.error("No audio"))}
                     >
                         {isCurrentlyPlayingAlbum && isPlaying ? <Pause className="h-10 w-10" /> : <Play className="h-10 w-10 ml-2" />}
                     </Button>
                 </div>
            </div>
 
-           <div className="flex gap-2 mb-6">
+           <div className="flex flex-col gap-2 mb-6">
                <Button 
-                    className="flex-1" 
+                    className="w-full" 
                     size="lg"
                     disabled={!hasVideos}
-                    onClick={() => isCurrentlyPlayingAlbum ? togglePlay() : playAlbum(viewAlbum, 0)}
+                    onClick={() => isCurrentlyPlayingAlbum ? togglePlay() : playAlbum(viewAlbum)}
                 >
                    {isCurrentlyPlayingAlbum && isPlaying ? <Pause className="mr-2 h-5 w-5" /> : <Play className="mr-2 h-5 w-5" />}
                    {isCurrentlyPlayingAlbum && isPlaying ? "Pause" : "Play Album"}
                </Button>
+               <div className="flex gap-2">
+                   <Button 
+                        variant="outline"
+                        className="flex-1" 
+                        size="sm"
+                        disabled={!hasVideos}
+                        onClick={() => playAlbumNext(viewAlbum)}
+                    >
+                       <Play className="mr-2 h-4 w-4" />
+                       Play Next
+                   </Button>
+                   <Button 
+                        variant="outline"
+                        className="flex-1" 
+                        size="sm"
+                        disabled={!hasVideos}
+                        onClick={() => addAlbumToQueue(viewAlbum)}
+                    >
+                       <Plus className="mr-2 h-4 w-4" />
+                       Add to Queue
+                   </Button>
+               </div>
            </div>
            
            {hasLikedTracks && (
@@ -250,7 +281,7 @@ export function FocusView() {
                                                 "flex items-center gap-4 p-3 rounded-md transition-colors cursor-pointer hover:bg-muted",
                                                 isPlayingVideo && "bg-primary/10"
                                             )}
-                                            onClick={() => playAlbum(viewAlbum, idx)}
+                                            onClick={() => playTrack(viewAlbum, idx)}
                                         >
                                             <div className="w-8 text-center text-sm font-mono text-muted-foreground">
                                                 {isPlayingVideo ? <Play className="h-4 w-4 animate-pulse text-primary" /> : (idx + 1)}
