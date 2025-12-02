@@ -1,57 +1,61 @@
-import { useState, useMemo } from "react";
 import { useData } from "@/context/DataContext";
 import { AlbumGrid } from "@/components/album/AlbumGrid";
-import { Badge } from "@/components/ui/badge";
+import { FilterBar } from "@/components/filters/FilterBar";
+import { useAlbumFilters } from "@/hooks/useAlbumFilters";
 
 export function DiggingView() {
   const { albums, isLoading } = useData();
-  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
-
-  // Extract unique genres from albums
-  const allGenres = useMemo(() => {
-    const genres = new Set<string>();
-    albums.forEach(album => {
-        album.styles?.forEach(style => genres.add(style));
-        // Also add main genres
-        album.genres?.forEach(g => genres.add(g));
-    });
-    return Array.from(genres).sort().slice(0, 10); // Limit to top 10 for UI
-  }, [albums]);
-
-  const filteredAlbums = useMemo(() => {
-      if (!selectedGenre) return albums;
-      return albums.filter(album => 
-          album.styles?.includes(selectedGenre) || album.genres?.includes(selectedGenre)
-      );
-  }, [albums, selectedGenre]);
+  
+  const {
+    filters,
+    filteredAlbums,
+    filterOptions,
+    activeFilterCount,
+    setSearch,
+    setGenres,
+    setStyles,
+    setYearRange,
+    setPriceRange,
+    setMinRating,
+    setCountries,
+    setConditions,
+    setHasAudio,
+    setHasBeenPlayed,
+    setHasLikedTracks,
+    setIsNew,
+    setSort,
+    resetFilters,
+  } = useAlbumFilters(albums, 'digging-filters');
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-        <h1 className="text-2xl font-bold tracking-tight">New Arrivals</h1>
-        
-        <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
-            <Badge 
-                variant={selectedGenre === null ? "secondary" : "outline"} 
-                className="cursor-pointer whitespace-nowrap"
-                onClick={() => setSelectedGenre(null)}
-            >
-                All Genres
-            </Badge>
-            {allGenres.map(genre => (
-                <Badge 
-                    key={genre}
-                    variant={selectedGenre === genre ? "secondary" : "outline"} 
-                    className="cursor-pointer whitespace-nowrap"
-                    onClick={() => setSelectedGenre(genre)}
-                >
-                    {genre}
-                </Badge>
-            ))}
-        </div>
+    <div className="min-h-full relative">
+      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b px-6 py-2">
+        <FilterBar
+          filters={filters}
+          filterOptions={filterOptions}
+          activeFilterCount={activeFilterCount}
+          totalCount={albums.length}
+          filteredCount={filteredAlbums.length}
+          onSearchChange={setSearch}
+          onGenresChange={setGenres}
+          onStylesChange={setStyles}
+          onYearRangeChange={setYearRange}
+          onPriceRangeChange={setPriceRange}
+          onMinRatingChange={setMinRating}
+          onCountriesChange={setCountries}
+          onConditionsChange={setConditions}
+          onHasAudioChange={setHasAudio}
+          onHasBeenPlayedChange={setHasBeenPlayed}
+          onHasLikedTracksChange={setHasLikedTracks}
+          onIsNewChange={setIsNew}
+          onSortChange={setSort}
+          onReset={resetFilters}
+        />
       </div>
 
-      <AlbumGrid albums={filteredAlbums} isLoading={isLoading} />
+      <div className="p-6">
+        <AlbumGrid albums={filteredAlbums} isLoading={isLoading} />
+      </div>
     </div>
   );
 }

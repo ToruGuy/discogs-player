@@ -1,28 +1,73 @@
 import { useMemo } from "react";
 import { useData } from "@/context/DataContext";
 import { AlbumGrid } from "@/components/album/AlbumGrid";
+import { FilterBar } from "@/components/filters/FilterBar";
+import { useAlbumFilters } from "@/hooks/useAlbumFilters";
 
 export function LikedView() {
   const { albums, isLoading } = useData();
 
+  // Pre-filter to only albums with liked/disliked tracks
   const likedAlbums = useMemo(() => {
-      return albums.filter(album => 
-          album.user_interactions?.some(i => 
-              (i.interaction_type === 'liked' || i.interaction_type === 'disliked') && 
-              i.video_index !== undefined
-          )
-      );
+    return albums.filter(album => 
+      album.user_interactions?.some(i => 
+        (i.interaction_type === 'liked' || i.interaction_type === 'disliked') && 
+        i.video_index !== undefined
+      )
+    );
   }, [albums]);
+
+  const {
+    filters,
+    filteredAlbums,
+    filterOptions,
+    activeFilterCount,
+    setSearch,
+    setGenres,
+    setStyles,
+    setYearRange,
+    setPriceRange,
+    setMinRating,
+    setCountries,
+    setConditions,
+    setHasAudio,
+    setHasBeenPlayed,
+    setHasLikedTracks,
+    setIsNew,
+    setSort,
+    resetFilters,
+  } = useAlbumFilters(likedAlbums, 'bag-filters');
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">The Bag</h1>
-        <span className="text-muted-foreground text-sm">{likedAlbums.length} items</span>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight mb-4">The Bag</h1>
+        
+        <FilterBar
+          filters={filters}
+          filterOptions={filterOptions}
+          activeFilterCount={activeFilterCount}
+          totalCount={likedAlbums.length}
+          filteredCount={filteredAlbums.length}
+          onSearchChange={setSearch}
+          onGenresChange={setGenres}
+          onStylesChange={setStyles}
+          onYearRangeChange={setYearRange}
+          onPriceRangeChange={setPriceRange}
+          onMinRatingChange={setMinRating}
+          onCountriesChange={setCountries}
+          onConditionsChange={setConditions}
+          onHasAudioChange={setHasAudio}
+          onHasBeenPlayedChange={setHasBeenPlayed}
+          onHasLikedTracksChange={setHasLikedTracks}
+          onIsNewChange={setIsNew}
+          onSortChange={setSort}
+          onReset={resetFilters}
+        />
       </div>
 
       <AlbumGrid 
-        albums={likedAlbums} 
+        albums={filteredAlbums} 
         isLoading={isLoading} 
         emptyMessage="Your bag is empty. Go dig some records!" 
       />
