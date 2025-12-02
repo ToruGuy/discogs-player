@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, SkipBack, SkipForward, ThumbsUp, ThumbsDown, Plus, Heart, ChevronDown, ChevronUp } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Play, Pause, SkipBack, SkipForward, ThumbsUp, ThumbsDown, Plus, Heart, ChevronDown, ChevronUp, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ImportDialog } from "@/components/ImportDialog";
@@ -168,8 +169,6 @@ export function TopBar() {
             </Button>
             </div>
 
-            {/* Volume (Removed) */}
-            
             {/* Queue & Expand */}
             <div className="flex items-center">
                 {queue.length > 0 && (
@@ -204,9 +203,11 @@ export function TopBar() {
                 </Button>
               }
             />
-             <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hidden md:flex">
-              <Heart className="h-4 w-4" />
-            </Button>
+            <Link to="/settings">
+              <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground transition-colors">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </Link>
         </div>
       </div>
 

@@ -1,14 +1,16 @@
 import { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { useData } from "@/context/DataContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Activity } from "lucide-react";
 
 export function SettingsView() {
   const { scrapeUrl } = useData();
   const [url, setUrl] = useState("");
+  const [pingResult, setPingResult] = useState<string>("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,11 +20,46 @@ export function SettingsView() {
     }
   };
 
+  const handlePing = async () => {
+    try {
+        const result = await invoke<string>('test_ipc_ping', { payload: 'Hello from React' });
+        setPingResult(result);
+    } catch (error) {
+        setPingResult(`Error: ${error}`);
+    }
+  };
+
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold tracking-tight mb-6">Settings</h1>
 
       <div className="space-y-6">
+          
+          {/* IPC Connectivity Test */}
+          <Card className="border-green-500/20 bg-green-500/5">
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-green-500" />
+                    IPC Connectivity Check
+                  </CardTitle>
+                  <CardDescription>
+                    Verify that the React frontend can talk to the Rust backend.
+                  </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                  <div className="flex gap-4 items-center">
+                    <Button onClick={handlePing} variant="secondary">
+                        Ping Backend
+                    </Button>
+                    {pingResult && (
+                        <div className="text-sm font-mono bg-muted p-2 rounded border">
+                            {pingResult}
+                        </div>
+                    )}
+                  </div>
+              </CardContent>
+          </Card>
+
           {/* Source Management */}
           <Card>
               <CardHeader>

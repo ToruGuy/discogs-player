@@ -1,9 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react';
-import YouTube from 'react-youtube';
 import { usePlayer } from '@/context/PlayerContext';
 import { useData } from '@/context/DataContext';
 
-const PROGRESS_UPDATE_INTERVAL = 250; // ms (4 updates/sec instead of 60)
+const SIDECAR_URL = 'http://localhost:4567';
 
 export function YoutubePlayer() {
   const { 
@@ -18,125 +17,105 @@ export function YoutubePlayer() {
     seekRequest,
     isSeeking
   } = usePlayer();
+  
   const { updateVideoTitle } = useData();
-  const playerRef = useRef<any>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const lastVideoIdRef = useRef<string | null>(null);
   const lastSeekRef = useRef<number | null>(null);
-  const requestRef = useRef<number>();
-  const lastProgressUpdateRef = useRef<number>(0);
 
-  // Handle seek requests
+  // Helper to send commands to the iframe
+  const sendCommand = useCallback((command: string, payload: any = {}) => {
+    if (iframeRef.current && iframeRef.current.contentWindow) {
+      iframeRef.current.contentWindow.postMessage({ command, ...payload }, '*');
+    }
+  }, []);
+
+  // 1. Load Video
   useEffect(() => {
-    if (seekRequest !== null && seekRequest !== lastSeekRef.current && playerRef.current) {
-      playerRef.current.seekTo(seekRequest, true);
-      lastSeekRef.current = seekRequest;
+    if (currentVideo?.youtube_video_id && currentVideo.youtube_video_id !== lastVideoIdRef.current) {
+      lastVideoIdRef.current = currentVideo.youtube_video_id;
+      sendCommand('loadVideo', { videoId: currentVideo.youtube_video_id, startSeconds: 0 });
     }
-  }, [seekRequest]);
+  }, [currentVideo?.youtube_video_id, sendCommand]);
 
-  // RAF for progress - throttled to 4 updates/sec
-  const updateProgress = useCallback(() => {
-    const now = Date.now();
-    
-    if (playerRef.current && isPlaying && !isSeeking) {
-      // Only update state at throttled interval
-      if (now - lastProgressUpdateRef.current >= PROGRESS_UPDATE_INTERVAL) {
-        try {
-          const currentTime = playerRef.current.getCurrentTime();
-          const duration = playerRef.current.getDuration();
-          
-          if (typeof currentTime === 'number') setProgress(currentTime);
-          if (typeof duration === 'number' && duration > 0) setDuration(duration);
-          
-          lastProgressUpdateRef.current = now;
-        } catch (e) {
-          // Ignore errors
-        }
-      }
-    }
-    requestRef.current = requestAnimationFrame(updateProgress);
-  }, [isPlaying, isSeeking, setProgress, setDuration]);
-
+  // 2. Play/Pause Sync
   useEffect(() => {
     if (isPlaying) {
-      requestRef.current = requestAnimationFrame(updateProgress);
+      sendCommand('play');
     } else {
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+      sendCommand('pause');
     }
-    return () => {
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
-    };
-  }, [isPlaying, updateProgress]);
+  }, [isPlaying, sendCommand]);
 
-  // Sync play/pause state
+  // 3. Seek Sync
   useEffect(() => {
-    if (playerRef.current) {
-      if (isPlaying) {
-        playerRef.current.playVideo();
-      } else {
-        playerRef.current.pauseVideo();
-      }
+    if (seekRequest !== null && seekRequest !== lastSeekRef.current) {
+      lastSeekRef.current = seekRequest;
+      sendCommand('seek', { time: seekRequest });
     }
-  }, [isPlaying]);
+  }, [seekRequest, sendCommand]);
+
+  // 4. Listen for messages from Sidecar
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Verify origin if needed, but localhost:4567 is expected
+      // if (event.origin !== SIDECAR_URL) return;
+
+      const { type, data, currentTime, duration, title } = event.data;
+
+      switch (type) {
+        case 'API_READY':
+        case 'PLAYER_READY':
+            // Re-send load command if needed, or just ensure sync
+            if (currentVideo?.youtube_video_id) {
+                // If we just mounted, make sure we load the video
+                sendCommand('loadVideo', { videoId: currentVideo.youtube_video_id });
+                if (isPlaying) sendCommand('play');
+            }
+            break;
+
+        case 'STATE_CHANGE':
+             // data: 0 = ENDED
+            if (data === 0) {
+                nextTrack();
+            }
+            break;
+
+        case 'PROGRESS':
+            if (!isSeeking) {
+                if (typeof currentTime === 'number') setProgress(currentTime);
+                if (typeof duration === 'number' && duration > 0) setDuration(duration);
+            }
+            break;
+
+        case 'TITLE_UPDATE':
+            if (title && currentVideo) {
+                const currentQueueItem = queue[queueIndex];
+                if (currentQueueItem && currentQueueItem.title !== title) {
+                    updateQueueItemTitle(queueIndex, title);
+                    if (currentQueueItem.albumId) {
+                        updateVideoTitle(currentQueueItem.albumId, currentVideo.youtube_video_id, title);
+                    }
+                }
+            }
+            break;
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [currentVideo, isSeeking, isPlaying, nextTrack, queueIndex, queue, setProgress, setDuration, updateQueueItemTitle, updateVideoTitle, sendCommand]);
 
   if (!currentVideo) return null;
 
-  const checkAndUpdateTitle = (target: any) => {
-    if (!target || !target.getVideoData) return;
-    
-    const data = target.getVideoData();
-    if (data && data.title) {
-        const realTitle = data.title;
-        const currentQueueItem = queue[queueIndex];
-        
-        if (currentQueueItem && currentQueueItem.title !== realTitle) {
-             // console.log(`Updating title: "${currentQueueItem.title}" -> "${realTitle}"`);
-             updateQueueItemTitle(queueIndex, realTitle);
-             if (currentQueueItem.albumId) {
-                 updateVideoTitle(currentQueueItem.albumId, currentVideo.youtube_video_id, realTitle);
-             }
-        }
-    }
-  };
-
-  const onPlayerReady = (event: any) => {
-    playerRef.current = event.target;
-    if (isPlaying) {
-      event.target.playVideo();
-    }
-    checkAndUpdateTitle(event.target);
-  };
-
-  const onPlayerStateChange = (event: any) => {
-    // State 1 is Playing - metadata definitely ready
-    if (event.data === 1) {
-      checkAndUpdateTitle(event.target);
-    }
-
-    // State 0 is ended
-    if (event.data === 0) {
-      nextTrack();
-    }
-  };
-
-  const opts: any = {
-    height: '100%',
-    width: '100%',
-    playerVars: {
-      autoplay: isPlaying ? 1 : 0,
-      controls: 1,
-      modestbranding: 1,
-      origin: window.location.origin,
-    },
-  };
-
   return (
     <div className="w-full h-full bg-black">
-      <YouTube
-        videoId={currentVideo.youtube_video_id}
-        opts={opts}
-        onReady={onPlayerReady}
-        onStateChange={onPlayerStateChange}
-        className="w-full h-full"
-        iframeClassName="w-full h-full"
+      <iframe
+        ref={iframeRef}
+        src={SIDECAR_URL}
+        className="w-full h-full border-0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
       />
     </div>
   );
