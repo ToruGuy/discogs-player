@@ -1,12 +1,15 @@
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePlayer } from '@/context/PlayerContext';
 import { useData } from '@/context/DataContext';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { X, Trash2, Play, Pause, SkipBack, SkipForward, ThumbsUp, ThumbsDown, Disc } from 'lucide-react';
+import { X, Trash2, Play, Pause, SkipBack, SkipForward, ThumbsUp, ThumbsDown, Disc, Album, Youtube, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { openExternalLink } from '@/lib/external-links';
 
 export function PlayerOverlay() {
+  const navigate = useNavigate();
   const { 
     isPlayerOpen, 
     togglePlayerOverlay, 
@@ -20,7 +23,8 @@ export function PlayerOverlay() {
     prevTrack,
     jumpToQueueIndex,
     currentAlbum,
-    currentTrackIndex
+    currentTrackIndex,
+    currentVideo
   } = usePlayer();
 
   const { albums, toggleVideoLike } = useData();
@@ -185,7 +189,7 @@ export function PlayerOverlay() {
           {/* Content Area */}
           <div className="flex-1 flex overflow-hidden">
             {/* Left: Visuals (was YouTube Player) */}
-            <div className="w-full md:w-2/3 p-4 flex items-center justify-center bg-muted/30">
+            <div className="w-full md:w-2/3 p-4 flex flex-col items-center justify-center bg-muted/30 gap-4">
               <div className="w-full max-w-2xl aspect-square md:aspect-video flex items-center justify-center shadow-2xl rounded-lg overflow-hidden bg-black">
                  {currentAlbum ? (
                    <img 
@@ -200,6 +204,49 @@ export function PlayerOverlay() {
                    </div>
                  )}
               </div>
+              
+              {/* Action Buttons */}
+              {currentAlbum && (
+                <div className="flex flex-wrap items-center justify-center gap-2 w-full max-w-2xl">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      togglePlayerOverlay();
+                      navigate(`/now-playing/${currentAlbum.id}`);
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Album className="h-4 w-4" />
+                    View Album
+                  </Button>
+                  
+                  {currentVideo && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const youtubeUrl = currentVideo.youtube_url || `https://www.youtube.com/watch?v=${currentVideo.youtube_video_id}`;
+                        openExternalLink(youtubeUrl);
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <Youtube className="h-4 w-4" />
+                      Go to YouTube
+                    </Button>
+                  )}
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openExternalLink(currentAlbum.release_url)}
+                    className="flex items-center gap-2"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Go to Discogs Release
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Right: Queue List */}
