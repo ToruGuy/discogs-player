@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { usePlayer } from '@/context/PlayerContext';
 import { useData } from '@/context/DataContext';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { X, Trash2, Play, Pause, SkipBack, SkipForward, ThumbsUp, ThumbsDown, Disc, Album, Youtube, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { openExternalLink } from '@/lib/external-links';
@@ -187,9 +186,9 @@ export function PlayerOverlay() {
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex overflow-hidden min-w-0">
             {/* Left: Visuals (was YouTube Player) */}
-            <div className="w-full md:w-2/3 p-4 flex flex-col items-center justify-center bg-muted/30 gap-4">
+            <div className="flex-1 min-w-0 p-4 flex flex-col items-center justify-center bg-muted/30 gap-4">
               <div className="w-full max-w-2xl aspect-square md:aspect-video flex items-center justify-center shadow-2xl rounded-lg overflow-hidden bg-black">
                  {currentAlbum ? (
                    <img 
@@ -250,20 +249,20 @@ export function PlayerOverlay() {
             </div>
 
             {/* Right: Queue List */}
-            <div className="hidden md:block w-1/3 border-l p-4">
-              <div className="flex items-center justify-between mb-4">
+            <div className="hidden md:flex w-80 flex-shrink-0 border-l p-4 flex-col min-h-0">
+              <div className="flex items-center justify-between mb-4 flex-shrink-0">
                 <h3 className="text-sm font-medium text-muted-foreground">
                   Queue ({queueIndex + 1} / {queue.length})
                 </h3>
               </div>
-              <ScrollArea className="h-full">
+              <div className="flex-1 min-h-0 overflow-hidden">
                 {queue.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">
                     <p className="text-sm">Queue is empty</p>
                     <p className="text-xs mt-2">Add tracks to start building your queue</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="h-full overflow-y-auto space-y-2 pb-4 pr-1">
                     {queue.map((item, index) => (
                       <div
                         key={item.id}
@@ -306,7 +305,7 @@ export function PlayerOverlay() {
                     ))}
                   </div>
                 )}
-              </ScrollArea>
+              </div>
             </div>
           </div>
         </div>
