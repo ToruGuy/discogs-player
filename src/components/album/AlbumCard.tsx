@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { Album } from "@/types";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -5,24 +6,29 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Play, ExternalLink, Pause, ThumbsUp, ThumbsDown, MoreVertical, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
-import { usePlayer } from "@/context/PlayerContext";
 import { cn } from "@/lib/utils";
 import { openExternalLink } from "@/lib/external-links";
 import { toast } from "sonner";
 
 interface AlbumCardProps {
     album: Album;
+    isCurrentAlbum?: boolean;
+    isPlaying?: boolean;
+    onPlay: (album: Album) => void;
+    onPlayNext: (album: Album) => void;
+    onAddToQueue: (album: Album) => void;
+    onTogglePlay: () => void;
 }
 
-export function AlbumCard({ album }: AlbumCardProps) {
-    const { 
-        playAlbum, 
-        playAlbumNext,
-        addAlbumToQueue,
-        currentAlbum, 
-        isPlaying, 
-        togglePlay
-    } = usePlayer();
+export const AlbumCard = memo(function AlbumCard({ 
+    album, 
+    isCurrentAlbum = false,
+    isPlaying = false,
+    onPlay,
+    onPlayNext,
+    onAddToQueue,
+    onTogglePlay
+}: AlbumCardProps) {
     
     const hasYoutubeVideos = album.youtube_videos && album.youtube_videos.length > 0;
     const mainCollectionItem = album.collection_items?.[0];
@@ -36,17 +42,15 @@ export function AlbumCard({ album }: AlbumCardProps) {
     const dislikedCount = album.user_interactions?.filter(
         i => i.interaction_type === 'disliked' && i.video_index !== undefined
     ).length || 0;
-    
-    const isCurrentAlbum = currentAlbum?.id === album.id;
 
     const handlePlayClick = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
         
         if (isCurrentAlbum) {
-            togglePlay();
+            onTogglePlay();
         } else {
-            playAlbum(album);
+            onPlay(album);
         }
     };
 
@@ -59,7 +63,7 @@ export function AlbumCard({ album }: AlbumCardProps) {
             return;
         }
         
-        addAlbumToQueue(album);
+        onAddToQueue(album);
         const itemCount = album.youtube_videos?.length || 0;
         toast.success(`Added ${itemCount} track${itemCount > 1 ? 's' : ''} to queue`);
     };
@@ -73,7 +77,7 @@ export function AlbumCard({ album }: AlbumCardProps) {
             return;
         }
         
-        playAlbumNext(album);
+        onPlayNext(album);
         const itemCount = album.youtube_videos?.length || 0;
         toast.success(`Added ${itemCount} track${itemCount > 1 ? 's' : ''} to play next`);
     };
@@ -226,5 +230,4 @@ export function AlbumCard({ album }: AlbumCardProps) {
         </CardFooter>
     </Card>
     );
-}
-
+});

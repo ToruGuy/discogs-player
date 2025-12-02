@@ -3,6 +3,8 @@ import YouTube from 'react-youtube';
 import { usePlayer } from '@/context/PlayerContext';
 import { useData } from '@/context/DataContext';
 
+const PROGRESS_UPDATE_INTERVAL = 250; // ms (4 updates/sec instead of 60)
+
 export function YoutubePlayer() {
   const { 
     currentVideo, 
@@ -20,6 +22,7 @@ export function YoutubePlayer() {
   const playerRef = useRef<any>(null);
   const lastSeekRef = useRef<number | null>(null);
   const requestRef = useRef<number>();
+  const lastProgressUpdateRef = useRef<number>(0);
 
   // Handle seek requests
   useEffect(() => {
@@ -29,17 +32,24 @@ export function YoutubePlayer() {
     }
   }, [seekRequest]);
 
-  // RAF for progress
+  // RAF for progress - throttled to 4 updates/sec
   const updateProgress = useCallback(() => {
+    const now = Date.now();
+    
     if (playerRef.current && isPlaying && !isSeeking) {
-      try {
-        const currentTime = playerRef.current.getCurrentTime();
-        const duration = playerRef.current.getDuration();
-        
-        if (typeof currentTime === 'number') setProgress(currentTime);
-        if (typeof duration === 'number' && duration > 0) setDuration(duration);
-      } catch (e) {
-        // Ignore errors
+      // Only update state at throttled interval
+      if (now - lastProgressUpdateRef.current >= PROGRESS_UPDATE_INTERVAL) {
+        try {
+          const currentTime = playerRef.current.getCurrentTime();
+          const duration = playerRef.current.getDuration();
+          
+          if (typeof currentTime === 'number') setProgress(currentTime);
+          if (typeof duration === 'number' && duration > 0) setDuration(duration);
+          
+          lastProgressUpdateRef.current = now;
+        } catch (e) {
+          // Ignore errors
+        }
       }
     }
     requestRef.current = requestAnimationFrame(updateProgress);
