@@ -70,7 +70,13 @@ export function YoutubePlayer() {
             if (currentVideo?.youtube_video_id) {
                 // If we just mounted, make sure we load the video
                 sendCommand('loadVideo', { videoId: currentVideo.youtube_video_id });
-                if (isPlaying) sendCommand('play');
+                // Explicitly sync play state - YouTube loadVideo often auto-plays
+                if (isPlaying) {
+                    sendCommand('play');
+                } else {
+                    // Ensure we pause if not meant to be playing (prevents auto-play on startup)
+                    sendCommand('pause');
+                }
             }
             break;
 
