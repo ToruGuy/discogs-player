@@ -26,9 +26,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       // Try loading from DB first
       let data = await dbService.getAllAlbums();
       
-      if (data.length === 0) {
-        // Fallback to mock data/API if DB is empty
-        console.log("DB empty, falling back to mock API");
+      // Check if DB needs seeding or updating (if stats are missing/zero)
+      const needsUpdate = data.length === 0 || (data.length > 0 && data[0].have_count === 0 && data[0].want_count === 0 && data[0].avg_rating === 0);
+      
+      if (needsUpdate) {
+        // Fallback to mock data/API if DB is empty or stale
+        console.log("DB empty or stale, syncing with mock API");
         const apiData = await api.getAlbums();
         // Seed DB with mock data
         for (const album of apiData) {

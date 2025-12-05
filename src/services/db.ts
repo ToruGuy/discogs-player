@@ -34,7 +34,16 @@ class DatabaseService {
       
       const videos = await db.select<(DbYoutubeVideo & { order_index: number })[]>('SELECT v.*, av.order_index FROM youtube_videos v JOIN album_videos av ON v.id = av.video_id WHERE av.album_id = ? ORDER BY av.order_index', [album.discogs_release_id]);
       
-      const collectionItems = await db.select<CollectionItem[]>('SELECT * FROM collection_items WHERE album_id = ?', [album.discogs_release_id]);
+      const rawCollectionItems = await db.select<any[]>('SELECT * FROM collection_items WHERE album_id = ?', [album.discogs_release_id]);
+      const collectionItems: CollectionItem[] = rawCollectionItems.map(item => ({
+        item_url: item.item_url || (item.collection_id ? `https://www.discogs.com/sell/item/${item.collection_id}` : album.resource_url || ''),
+        seller_price: item.price ?? 0,
+        seller_condition: item.condition || null,
+        seller_notes: item.notes || null,
+        is_new: item.is_new ?? 0,
+        is_available: item.is_available ?? 0,
+        collection_id: item.collection_id ?? 0
+      }));
       
       const interactions = await db.select<UserInteraction[]>('SELECT * FROM user_interactions WHERE album_id = ?', [album.discogs_release_id]);
       
@@ -72,12 +81,12 @@ class DatabaseService {
         user_interactions: interactions,
         genres: genres.map(g => g.name),
         styles: styles.map(s => s.name),
-        // Calculate derived fields
-        have_count: 0, // TODO: Store this?
-        want_count: 0, // TODO: Store this?
-        avg_rating: 0, // TODO: Store this?
-        ratings_count: 0, // TODO: Store this?
-        last_sold_date: null, // TODO: Store this?
+        // Album stats fields
+        have_count: album.have_count ?? 0,
+        want_count: album.want_count ?? 0,
+        avg_rating: album.avg_rating ?? 0,
+        ratings_count: album.ratings_count ?? 0,
+        last_sold_date: album.last_sold_date || null,
       };
     }));
 
@@ -91,12 +100,12 @@ class DatabaseService {
       // 1. Upsert Album
       await db.execute(
         `INSERT INTO albums (
-          discogs_release_id, artist, title, label, catalog_number, format, country, released_year, cover_image_url, resource_url, price_low, price_median, price_high
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+          discogs_release_id, artist, title, label, catalog_number, format, country, released_year, cover_image_url, resource_url, price_low, price_median, price_high, have_count, want_count, avg_rating, ratings_count, last_sold_date
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
         ON CONFLICT(discogs_release_id) DO UPDATE SET
-          artist=excluded.artist, title=excluded.title, updated_at=CURRENT_TIMESTAMP`,
+          artist=excluded.artist, title=excluded.title, have_count=excluded.have_count, want_count=excluded.want_count, avg_rating=excluded.avg_rating, ratings_count=excluded.ratings_count, last_sold_date=excluded.last_sold_date, updated_at=CURRENT_TIMESTAMP`,
         [
-          album.discogs_release_id, album.artist, album.title, album.label, album.catalog_number, album.format, album.country, album.released_year, album.image_url, album.release_url, album.price_low, album.price_median, album.price_high
+          album.discogs_release_id, album.artist, album.title, album.label, album.catalog_number, album.format, album.country, album.released_year, album.image_url, album.release_url, album.price_low, album.price_median, album.price_high, album.have_count, album.want_count, album.avg_rating, album.ratings_count, album.last_sold_date
         ]
       );
 
@@ -163,8 +172,8 @@ class DatabaseService {
           for (const item of album.collection_items) {
               await db.execute(
                   `INSERT INTO collection_items 
-                  (album_id, collection_id, price, condition, notes, is_available, is_new) 
-                  VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                  (album_id, collection_id, price, condition, notes, is_available, is_new, item_url) 
+                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
                   [
                       albumId, 
                       item.collection_id, 
@@ -172,7 +181,8 @@ class DatabaseService {
                       item.seller_condition, 
                       item.seller_notes, 
                       item.is_available,
-                      item.is_new
+                      item.is_new,
+                      item.item_url
                   ]
               );
           }

@@ -181,6 +181,27 @@ pub fn run() {
           ",
           kind: MigrationKind::Up,
       },
+      Migration {
+          version: 2,
+          description: "add_album_stats_fields",
+          sql: "
+            -- Add missing fields to albums table
+            ALTER TABLE albums ADD COLUMN have_count INTEGER DEFAULT 0;
+            ALTER TABLE albums ADD COLUMN want_count INTEGER DEFAULT 0;
+            ALTER TABLE albums ADD COLUMN avg_rating REAL DEFAULT 0;
+            ALTER TABLE albums ADD COLUMN ratings_count INTEGER DEFAULT 0;
+            ALTER TABLE albums ADD COLUMN last_sold_date TEXT;
+          ",
+          kind: MigrationKind::Up,
+      },
+      Migration {
+          version: 3,
+          description: "add_item_url_to_collection_items",
+          sql: "
+            ALTER TABLE collection_items ADD COLUMN item_url TEXT;
+          ",
+          kind: MigrationKind::Up,
+      },
   ];
 
   tauri::Builder::default()

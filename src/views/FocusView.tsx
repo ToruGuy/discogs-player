@@ -388,7 +388,7 @@ export function FocusView() {
                                                             </Badge>
                                                         )}
                                                     </div>
-                                                    <div className="text-lg font-bold">€{item.seller_price.toFixed(2)}</div>
+                                                    <div className="text-lg font-bold">€{item.seller_price?.toFixed(2) || "--"}</div>
                                                 </div>
                                                 {item.seller_notes && (
                                                     <p className="text-xs text-muted-foreground mb-3">{item.seller_notes}</p>
@@ -397,6 +397,7 @@ export function FocusView() {
                                                     size="sm" 
                                                     variant="outline" 
                                                     className="w-full gap-2"
+                                                    disabled={!item.item_url}
                                                     onClick={() => openExternalLink(item.item_url)}
                                                 >
                                                     <ExternalLink className="h-3 w-3" /> View on Discogs

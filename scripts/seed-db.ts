@@ -43,6 +43,11 @@ db.exec(`
     price_low REAL,
     price_median REAL,
     price_high REAL,
+    have_count INTEGER DEFAULT 0,
+    want_count INTEGER DEFAULT 0,
+    avg_rating REAL DEFAULT 0,
+    ratings_count INTEGER DEFAULT 0,
+    last_sold_date TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
@@ -110,6 +115,7 @@ db.exec(`
     notes TEXT,
     is_available BOOLEAN,
     is_new INTEGER,
+    item_url TEXT,
     FOREIGN KEY (album_id) REFERENCES albums(discogs_release_id) ON DELETE CASCADE
   );
 
@@ -126,10 +132,10 @@ db.exec(`
 // Statements
 const insertAlbum = db.prepare(`
   INSERT INTO albums (
-    discogs_release_id, artist, title, label, catalog_number, format, country, released_year, cover_image_url, resource_url, price_low, price_median, price_high
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    discogs_release_id, artist, title, label, catalog_number, format, country, released_year, cover_image_url, resource_url, price_low, price_median, price_high, have_count, want_count, avg_rating, ratings_count, last_sold_date
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   ON CONFLICT(discogs_release_id) DO UPDATE SET
-    artist=excluded.artist, title=excluded.title, updated_at=CURRENT_TIMESTAMP
+    artist=excluded.artist, title=excluded.title, have_count=excluded.have_count, want_count=excluded.want_count, avg_rating=excluded.avg_rating, ratings_count=excluded.ratings_count, last_sold_date=excluded.last_sold_date, updated_at=CURRENT_TIMESTAMP
 `);
 
 const deleteTracks = db.prepare('DELETE FROM tracks WHERE album_id = ?');
@@ -151,8 +157,8 @@ const linkStyle = db.prepare('INSERT INTO album_styles (album_id, style_id) VALU
 
 const deleteCollection = db.prepare('DELETE FROM collection_items WHERE album_id = ?');
 const insertCollection = db.prepare(`
-  INSERT INTO collection_items (album_id, collection_id, price, condition, notes, is_available, is_new) 
-  VALUES (?, ?, ?, ?, ?, ?, ?)
+  INSERT INTO collection_items (album_id, collection_id, price, condition, notes, is_available, is_new, item_url) 
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 const deleteInteractions = db.prepare('DELETE FROM user_interactions WHERE album_id = ?');
@@ -180,7 +186,12 @@ const transaction = db.transaction((albumsToInsert) => {
       album.release_url || album.resource_url,
       album.price_low,
       album.price_median,
-      album.price_high
+      album.price_high,
+      album.have_count || 0,
+      album.want_count || 0,
+      album.avg_rating || 0,
+      album.ratings_count || 0,
+      album.last_sold_date || null
     );
 
     // Tracks
@@ -233,7 +244,8 @@ const transaction = db.transaction((albumsToInsert) => {
           item.seller_condition,
           item.seller_notes,
           item.is_available ? 1 : 0,
-          item.is_new ? 1 : 0
+          item.is_new ? 1 : 0,
+          item.item_url
         );
       }
     }
