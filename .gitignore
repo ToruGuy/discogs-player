@@ -23,3 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 tauri-docs/
+
+# Database files (development/testing only - production DB is in app data directory)
+*.db
+*.db-shm
+*.db-wal
+src-tauri/discogs.db
