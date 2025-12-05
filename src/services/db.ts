@@ -45,7 +45,23 @@ class DatabaseService {
         collection_id: item.collection_id ?? 0
       }));
       
-      const interactions = await db.select<UserInteraction[]>('SELECT * FROM user_interactions WHERE album_id = ?', [album.discogs_release_id]);
+      const rawInteractions = await db.select<any[]>('SELECT * FROM user_interactions WHERE album_id = ?', [album.discogs_release_id]);
+      // Map video_id (YouTube ID) back to video_index
+      const interactions: UserInteraction[] = rawInteractions.map(i => {
+        let videoIndex: number | undefined = undefined;
+        if (i.video_id) {
+          // Find the index of this youtube video in the videos array
+          const idx = videos.findIndex(v => v.id === i.video_id);
+          if (idx !== -1) {
+            videoIndex = idx;
+          }
+        }
+        return {
+          interaction_type: i.interaction_type,
+          video_index: videoIndex,
+          created_at: i.created_at
+        };
+      });
       
       const genres = await db.select<any[]>('SELECT g.name FROM genres g JOIN album_genres ag ON g.id = ag.genre_id WHERE ag.album_id = ?', [album.discogs_release_id]);
       
@@ -216,9 +232,74 @@ class DatabaseService {
   async toggleLike(albumId: string, isLiked: boolean) {
     const db = await this.connect();
     if (isLiked) {
-        await db.execute('INSERT INTO user_interactions (album_id, interaction_type) VALUES ($1, "liked")', [albumId]);
+        await db.execute('INSERT INTO user_interactions (album_id, interaction_type) VALUES ($1, $2)', [albumId, 'liked']);
     } else {
-        await db.execute('DELETE FROM user_interactions WHERE album_id = $1 AND interaction_type = "liked" AND video_id IS NULL', [albumId]);
+        await db.execute('DELETE FROM user_interactions WHERE album_id = $1 AND interaction_type = $2 AND video_id IS NULL', [albumId, 'liked']);
+    }
+  }
+
+  async toggleVideoLike(albumId: string, videoIndex: number, youtubeVideoId: string | null, action: 'liked' | 'disliked' | null) {
+    console.log('[DB] toggleVideoLike called:', { albumId, videoIndex, youtubeVideoId, action });
+    
+    try {
+      const db = await this.connect();
+      console.log('[DB] Connected to database');
+      
+      // Remove any existing like/dislike for this video (match by youtube video ID if available, else by index stored in video_id)
+      if (youtubeVideoId) {
+        console.log('[DB] Deleting existing interactions for youtubeVideoId:', youtubeVideoId);
+        await db.execute(
+          'DELETE FROM user_interactions WHERE album_id = $1 AND (interaction_type = $2 OR interaction_type = $3) AND video_id = $4',
+          [albumId, 'liked', 'disliked', youtubeVideoId]
+        );
+      }
+      console.log('[DB] Delete completed');
+      
+      // Add new interaction if not removing
+      if (action && youtubeVideoId) {
+        console.log('[DB] Inserting new interaction:', action, 'for video:', youtubeVideoId);
+        await db.execute(
+          'INSERT INTO user_interactions (album_id, interaction_type, video_id) VALUES ($1, $2, $3)',
+          [albumId, action, youtubeVideoId]
+        );
+        console.log('[DB] Insert completed');
+      } else if (action && !youtubeVideoId) {
+        console.warn('[DB] Cannot save interaction - no youtube video ID available');
+      }
+      
+      console.log('[DB] toggleVideoLike SUCCESS');
+    } catch (error) {
+      console.error('[DB] toggleVideoLike FAILED:', error);
+      throw error;
+    }
+  }
+
+  async markVideoAsPlayed(albumId: string, youtubeVideoId: string) {
+    console.log('[DB] markVideoAsPlayed called:', { albumId, youtubeVideoId });
+    
+    try {
+      const db = await this.connect();
+      
+      // Check if already exists to avoid duplicates
+      const existing = await db.select<any[]>(
+        'SELECT id FROM user_interactions WHERE album_id = $1 AND interaction_type = $2 AND video_id = $3',
+        [albumId, 'played', youtubeVideoId]
+      );
+      
+      if (existing.length > 0) {
+        console.log('[DB] Already marked as played, skipping');
+        return;
+      }
+      
+      await db.execute(
+        'INSERT INTO user_interactions (album_id, interaction_type, video_id) VALUES ($1, $2, $3)',
+        [albumId, 'played', youtubeVideoId]
+      );
+      
+      console.log('[DB] markVideoAsPlayed SUCCESS');
+    } catch (error) {
+      console.error('[DB] markVideoAsPlayed FAILED:', error);
+      throw error;
     }
   }
 

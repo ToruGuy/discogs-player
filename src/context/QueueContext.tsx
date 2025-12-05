@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { Album, QueueItem, YoutubeVideo } from '@/types';
 import { convertAlbumToQueueItems, convertTrackToQueueItem } from '@/lib/queue-helpers';
 import { useData } from './DataContext';
@@ -40,7 +40,7 @@ function insertAt<T>(array: T[], index: number, items: T[]): T[] {
 }
 
 export function QueueProvider({ children }: { children: React.ReactNode }) {
-  const { albums } = useData();
+  const { albums, markVideoAsPlayed } = useData();
   const { setIsPlaying } = useAudio();
   
   // State
@@ -81,6 +81,21 @@ export function QueueProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem(QUEUE_ID_STORAGE_KEY);
     }
   }, [activeItemId]);
+
+  // Track last played item to avoid duplicate "played" marks
+  const lastPlayedItemIdRef = useRef<string | null>(null);
+
+  // Mark video as played when active item changes
+  useEffect(() => {
+    if (!activeItemId || activeItemId === lastPlayedItemIdRef.current) return;
+    
+    const item = queue.find(q => q.id === activeItemId);
+    if (!item) return;
+
+    // Mark as played
+    lastPlayedItemIdRef.current = activeItemId;
+    markVideoAsPlayed(item.albumId, item.trackIndex);
+  }, [activeItemId, queue, markVideoAsPlayed]);
 
   // Derived Video/Album Data
   const { currentVideo, currentAlbum, currentTrackIndex } = useMemo(() => {

@@ -10,6 +10,7 @@ interface DataContextType {
   refresh: () => Promise<void>;
   toggleLike: (id: number) => Promise<void>;
   toggleVideoLike: (albumId: number, videoIndex: number, action: 'like' | 'dislike') => Promise<void>;
+  markVideoAsPlayed: (albumId: number, videoIndex: number) => Promise<void>;
   scrapeUrl: (url: string) => Promise<void>;
   updateVideoTitle: (albumId: number, videoId: string, newTitle: string) => void;
 }
@@ -94,8 +95,29 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleVideoLike = async (albumId: number, videoIndex: number, action: 'like' | 'dislike') => {
+    console.log('[DataContext] toggleVideoLike called:', { albumId, videoIndex, action });
+    
     try {
+      // Find album to get string ID for DB
+      const album = albums.find(a => a.id === albumId);
+      if (!album) {
+        console.error('[DataContext] Album not found for id:', albumId);
+        return;
+      }
+      console.log('[DataContext] Found album:', album.discogs_release_id);
+
+      // Get the actual YouTube video ID for this index
+      const video = album.youtube_videos?.[videoIndex];
+      const youtubeVideoId = video?.youtube_video_id || null;
+      console.log('[DataContext] Video at index', videoIndex, ':', youtubeVideoId);
+
       const result = await api.toggleVideoLike(albumId, videoIndex, action);
+      console.log('[DataContext] API result:', result);
+      
+      // Persist to database (pass actual video ID, not index)
+      console.log('[DataContext] Calling dbService.toggleVideoLike...');
+      await dbService.toggleVideoLike(album.discogs_release_id, videoIndex, youtubeVideoId, result);
+      console.log('[DataContext] DB persist SUCCESS');
       
       // Optimistic update
       setAlbums(prev => prev.map(album => {
@@ -131,6 +153,57 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Video like toggle failed", error);
       toast.error("Action failed");
+    }
+  };
+
+  const markVideoAsPlayed = async (albumId: number, videoIndex: number) => {
+    console.log('[DataContext] markVideoAsPlayed called:', { albumId, videoIndex });
+    
+    try {
+      const album = albums.find(a => a.id === albumId);
+      if (!album) {
+        console.error('[DataContext] Album not found for marking played:', albumId);
+        return;
+      }
+
+      // Get the actual YouTube video ID
+      const video = album.youtube_videos?.[videoIndex];
+      const youtubeVideoId = video?.youtube_video_id || null;
+      
+      if (!youtubeVideoId) {
+        console.warn('[DataContext] No youtube video ID for index:', videoIndex);
+        return;
+      }
+
+      // Check if already marked as played (avoid duplicates)
+      const alreadyPlayed = album.user_interactions?.some(
+        i => i.interaction_type === 'played' && i.video_index === videoIndex
+      );
+      
+      if (alreadyPlayed) {
+        console.log('[DataContext] Video already marked as played, skipping');
+        return;
+      }
+
+      // Persist to database
+      await dbService.markVideoAsPlayed(album.discogs_release_id, youtubeVideoId);
+      console.log('[DataContext] Marked as played in DB');
+
+      // Update local state
+      setAlbums(prev => prev.map(alb => {
+        if (alb.id === albumId) {
+          const interactions = alb.user_interactions ? [...alb.user_interactions] : [];
+          interactions.push({
+            interaction_type: 'played',
+            video_index: videoIndex,
+            created_at: new Date().toISOString()
+          });
+          return { ...alb, user_interactions: interactions };
+        }
+        return alb;
+      }));
+    } catch (error) {
+      console.error('[DataContext] markVideoAsPlayed failed:', error);
     }
   };
 
@@ -170,6 +243,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       refresh,
       toggleLike,
       toggleVideoLike,
+      markVideoAsPlayed,
       scrapeUrl,
       updateVideoTitle
     }}>
