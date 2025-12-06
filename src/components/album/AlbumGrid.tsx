@@ -88,7 +88,7 @@ export function AlbumGrid({ albums, isLoading, emptyMessage = "No records found.
     return (
         <div 
             ref={parentRef}
-            className="h-full overflow-auto"
+            className="h-full overflow-y-auto overflow-x-hidden"
             style={{ contain: 'strict' }}
         >
             <div

@@ -53,7 +53,7 @@ export function DiggingView() {
         />
       </div>
 
-      <div className="flex-1 min-h-0 px-3 pt-3 md:px-6 md:pt-6">
+      <div className="flex-1 min-h-0 px-3 pt-3 md:px-6 md:pt-6 overflow-hidden">
         <AlbumGrid albums={filteredAlbums} isLoading={isLoading} />
       </div>
     </div>
