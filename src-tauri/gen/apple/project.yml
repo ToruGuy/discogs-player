@@ -12,6 +12,7 @@ settingGroups:
     base:
       PRODUCT_NAME: discogs-player
       PRODUCT_BUNDLE_IDENTIFIER: com.discogs-player.app
+      DEVELOPMENT_TEAM: 27K9PQM3NK
 targetTemplates:
   app:
     type: application
