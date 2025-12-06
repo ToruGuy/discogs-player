@@ -397,17 +397,17 @@ export function FilterBar({
   const [showMoreFilters, setShowMoreFilters] = useState(false);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5 md:space-y-2">
       {/* Main filter row */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
         {/* Search */}
-        <div className="relative flex-1 min-w-[200px] max-w-[320px]">
+        <div className="relative w-full md:flex-1 md:min-w-[200px] md:max-w-[320px]">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search artist, title, label..."
             value={filters.search}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="h-8 pl-8 pr-8 text-sm"
+            className="h-9 md:h-8 pl-8 pr-8 text-sm"
           />
           {filters.search && (
             <Button
@@ -421,10 +421,8 @@ export function FilterBar({
           )}
         </div>
 
-        <Separator orientation="vertical" className="h-6 hidden sm:block" />
-
-        {/* Primary filters */}
-        <div className="flex flex-wrap items-center gap-1.5">
+        {/* Primary filters - horizontal scroll on mobile */}
+        <div className="flex items-center gap-1 md:gap-1.5 overflow-x-auto pb-1 md:pb-0 w-full md:w-auto scrollbar-hide">
           <MultiSelect
             label="Genre"
             icon={Music}
@@ -456,69 +454,65 @@ export function FilterBar({
             onChange={onPriceRangeChange}
             prefix="€"
           />
-        </div>
+        
+          {/* More filters toggle */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1 md:gap-1.5 text-xs shrink-0"
+            onClick={() => setShowMoreFilters(!showMoreFilters)}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            {activeFilterCount > 0 && (
+              <Badge variant="secondary" className="h-4 px-1 text-[10px] rounded-sm">
+                {activeFilterCount}
+              </Badge>
+            )}
+          </Button>
 
-        {/* More filters toggle */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 gap-1.5 text-xs"
-          onClick={() => setShowMoreFilters(!showMoreFilters)}
-        >
-          <SlidersHorizontal className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">More</span>
-          {activeFilterCount > 0 && (
-            <Badge variant="secondary" className="h-4 px-1 text-[10px] rounded-sm">
-              {activeFilterCount}
-            </Badge>
-          )}
-        </Button>
+          <Separator orientation="vertical" className="h-6 hidden md:block shrink-0" />
 
-        <Separator orientation="vertical" className="h-6 hidden sm:block" />
-
-        {/* Sort */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs font-normal">
-              <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="hidden sm:inline">
-                {sortOptions.find(o => o.value === filters.sortField)?.label}
-              </span>
-              <span className="text-muted-foreground">
-                {filters.sortDirection === 'asc' ? '↑' : '↓'}
-              </span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
-            <DropdownMenuRadioGroup 
-              value={filters.sortField}
-              onValueChange={(value) => onSortChange(value as SortField, filters.sortDirection)}
-            >
-              {sortOptions.map(option => (
-                <DropdownMenuRadioItem key={option.value} value={option.value} className="text-xs">
-                  {option.label}
+          {/* Sort */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 gap-1 md:gap-1.5 text-xs font-normal shrink-0">
+                <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-muted-foreground">
+                  {filters.sortDirection === 'asc' ? '↑' : '↓'}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuRadioGroup 
+                value={filters.sortField}
+                onValueChange={(value) => onSortChange(value as SortField, filters.sortDirection)}
+              >
+                {sortOptions.map(option => (
+                  <DropdownMenuRadioItem key={option.value} value={option.value} className="text-xs">
+                    {option.label}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuRadioGroup
+                value={filters.sortDirection}
+                onValueChange={(value) => onSortChange(filters.sortField, value as SortDirection)}
+              >
+                <DropdownMenuRadioItem value="asc" className="text-xs">
+                  Ascending ↑
                 </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuRadioGroup
-              value={filters.sortDirection}
-              onValueChange={(value) => onSortChange(filters.sortField, value as SortDirection)}
-            >
-              <DropdownMenuRadioItem value="asc" className="text-xs">
-                Ascending ↑
-              </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="desc" className="text-xs">
-                Descending ↓
-              </DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                <DropdownMenuRadioItem value="desc" className="text-xs">
+                  Descending ↓
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Expanded filters */}
       {showMoreFilters && (
-        <div className="flex flex-wrap items-center gap-2 p-3 bg-muted/30 rounded-lg border border-dashed">
+        <div className="flex flex-wrap items-center gap-1.5 md:gap-2 p-2 md:p-3 bg-muted/30 rounded-lg border border-dashed">
           <RatingFilter
             value={filters.minRating}
             onChange={onMinRatingChange}
@@ -537,7 +531,7 @@ export function FilterBar({
             onChange={onConditionsChange}
           />
           
-          <Separator orientation="vertical" className="h-6" />
+          <Separator orientation="vertical" className="h-6 hidden md:block" />
 
           <QuickToggle
             icon={Music}
@@ -567,26 +561,22 @@ export function FilterBar({
       )}
 
       {/* Results count and clear */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>
-          {filteredCount === totalCount 
-            ? `${totalCount} records`
-            : `${filteredCount} of ${totalCount} records`
-          }
+          {filteredCount} records
         </span>
         {activeFilterCount > 0 && (
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 text-xs text-muted-foreground hover:text-foreground"
+            className="h-6 text-xs text-muted-foreground hover:text-foreground -mr-2"
             onClick={onReset}
           >
             <X className="h-3 w-3 mr-1" />
-            Clear all filters
+            Clear
           </Button>
         )}
       </div>
     </div>
   );
 }
-

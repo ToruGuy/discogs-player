@@ -30,7 +30,8 @@ export function SettingsView() {
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="h-full overflow-y-auto p-6 pb-safe">
+      <div className="max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold tracking-tight mb-6">Settings</h1>
 
       <div className="space-y-6">
@@ -120,6 +121,7 @@ export function SettingsView() {
                   </div>
               </CardContent>
           </Card>
+      </div>
       </div>
     </div>
   );

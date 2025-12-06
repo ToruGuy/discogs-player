@@ -12,7 +12,7 @@ export function CollectionView() {
   ];
 
   return (
-    <div className="p-6">
+    <div className="h-full overflow-y-auto p-6 pb-safe">
        <h1 className="text-2xl font-bold tracking-tight mb-6">Collections</h1>
        
        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

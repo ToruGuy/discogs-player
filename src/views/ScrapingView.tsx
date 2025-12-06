@@ -19,7 +19,8 @@ const MOCK_JOBS = [
 
 export function ScrapingView() {
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="h-full overflow-y-auto p-6 pb-safe">
+      <div className="max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Scraper History</h1>
@@ -76,6 +77,7 @@ export function ScrapingView() {
             ))}
           </TableBody>
         </Table>
+      </div>
       </div>
     </div>
   );

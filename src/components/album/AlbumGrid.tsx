@@ -12,23 +12,32 @@ interface AlbumGridProps {
 
 // Grid configuration
 const COLUMN_COUNTS = { sm: 2, md: 3, lg: 4, xl: 5 };
-const GAP = 24; // 6 * 4 = 24px (gap-6)
-const ROW_HEIGHT = 380; // Approximate card height including footer
 
-function useColumnCount() {
-    // Simple responsive column count based on window width
-    // In a real app, you might use a resize observer
-    if (typeof window === 'undefined') return COLUMN_COUNTS.xl;
+function useGridConfig() {
+    // Simple responsive grid config based on window width
+    if (typeof window === 'undefined') {
+        return { columnCount: COLUMN_COUNTS.xl, gap: 24, rowHeight: 380 };
+    }
     const width = window.innerWidth;
-    if (width >= 1280) return COLUMN_COUNTS.xl;
-    if (width >= 1024) return COLUMN_COUNTS.lg;
-    if (width >= 768) return COLUMN_COUNTS.md;
-    return COLUMN_COUNTS.sm;
+    const isMobile = width < 768;
+    
+    let columnCount: number;
+    if (width >= 1280) columnCount = COLUMN_COUNTS.xl;
+    else if (width >= 1024) columnCount = COLUMN_COUNTS.lg;
+    else if (width >= 768) columnCount = COLUMN_COUNTS.md;
+    else columnCount = COLUMN_COUNTS.sm;
+    
+    // Responsive gap: 12px on mobile, 24px on desktop
+    const gap = isMobile ? 12 : 24;
+    // Responsive row height: smaller on mobile due to tighter layout
+    const rowHeight = isMobile ? 320 : 380;
+    
+    return { columnCount, gap, rowHeight };
 }
 
 export function AlbumGrid({ albums, isLoading, emptyMessage = "No records found." }: AlbumGridProps) {
     const parentRef = useRef<HTMLDivElement>(null);
-    const columnCount = useColumnCount();
+    const { columnCount, gap, rowHeight } = useGridConfig();
     
     const { 
         currentAlbum, 
@@ -62,24 +71,24 @@ export function AlbumGrid({ albums, isLoading, emptyMessage = "No records found.
     const virtualizer = useVirtualizer({
         count: rowCount,
         getScrollElement: () => parentRef.current,
-        estimateSize: () => ROW_HEIGHT + GAP,
+        estimateSize: () => rowHeight + gap,
         overscan: 2, // Render 2 extra rows above/below viewport
     });
 
     const virtualRows = virtualizer.getVirtualItems();
     
     if (isLoading) {
-        return <div className="flex items-center justify-center h-64 text-muted-foreground">Loading crate...</div>;
+        return <div className="flex items-center justify-center h-full text-muted-foreground">Loading crate...</div>;
     }
 
     if (albums.length === 0) {
-        return <div className="flex items-center justify-center h-64 text-muted-foreground">{emptyMessage}</div>;
+        return <div className="flex items-center justify-center h-full text-muted-foreground">{emptyMessage}</div>;
     }
 
     return (
         <div 
             ref={parentRef}
-            className="h-[calc(100vh-200px)] overflow-auto pb-20"
+            className="h-full overflow-auto"
             style={{ contain: 'strict' }}
         >
             <div
@@ -105,7 +114,7 @@ export function AlbumGrid({ albums, isLoading, emptyMessage = "No records found.
                                 transform: `translateY(${virtualRow.start}px)`,
                             }}
                         >
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-6">
                                 {rowAlbums.map((album) => (
                                     <AlbumCard 
                                         key={album.id} 
