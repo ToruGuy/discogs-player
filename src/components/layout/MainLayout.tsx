@@ -15,12 +15,14 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Content Body */}
       <div className="flex flex-1 overflow-hidden">
         {/* Main Content Area (The Crate) */}
-        <main className="flex-1 overflow-y-auto bg-muted/10 relative">
+        <main className="flex-1 overflow-hidden bg-muted/10 relative">
           {children}
         </main>
 
-        {/* Navigation Sidebar (Right) */}
-        <RightSidebar />
+        {/* Navigation Sidebar (Right) - Hidden on mobile */}
+        <div className="hidden lg:block">
+          <RightSidebar />
+        </div>
       </div>
 
       {/* Player Overlay */}

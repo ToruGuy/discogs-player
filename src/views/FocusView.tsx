@@ -54,10 +54,10 @@ export function FocusView() {
   const hasVideos = viewAlbum.youtube_videos && viewAlbum.youtube_videos.length > 0;
 
   return (
-    <div className="h-full flex flex-col md:flex-row overflow-hidden">
+    <div className="h-full flex flex-col lg:flex-row overflow-hidden">
        {/* Left Panel: Art & Meta */}
-       <div className="w-full md:w-[400px] p-6 border-r bg-background/50 overflow-y-auto">
-           <div className="aspect-square w-full bg-muted rounded-lg overflow-hidden mb-6 shadow-xl group relative">
+       <div className="w-full lg:w-[400px] p-4 md:p-6 border-b lg:border-b-0 lg:border-r bg-background/50 overflow-y-auto">
+           <div className="aspect-square w-full max-w-[280px] md:max-w-none mx-auto bg-muted rounded-lg overflow-hidden mb-4 md:mb-6 shadow-xl group relative">
                <img src={viewAlbum.image_url} alt={viewAlbum.title} className="w-full h-full object-cover" />
                
                 {/* Big Play Overlay */}
@@ -75,9 +75,9 @@ export function FocusView() {
                 </div>
            </div>
 
-           <div className="flex flex-col gap-2 mb-6">
+           <div className="flex flex-col gap-2 mb-4 md:mb-6">
                <Button 
-                    className="w-full" 
+                    className="w-full h-11 md:h-12 text-base" 
                     size="lg"
                     disabled={!hasVideos}
                     onClick={() => isCurrentlyPlayingAlbum ? togglePlay() : playAlbum(viewAlbum)}
@@ -88,23 +88,23 @@ export function FocusView() {
                <div className="flex gap-2">
                    <Button 
                         variant="outline"
-                        className="flex-1" 
+                        className="flex-1 h-10" 
                         size="sm"
                         disabled={!hasVideos}
                         onClick={() => playAlbumNext(viewAlbum)}
                     >
-                       <Play className="mr-2 h-4 w-4" />
-                       Play Next
+                       <Play className="mr-1.5 h-4 w-4" />
+                       <span className="hidden xs:inline">Play </span>Next
                    </Button>
                    <Button 
                         variant="outline"
-                        className="flex-1" 
+                        className="flex-1 h-10" 
                         size="sm"
                         disabled={!hasVideos}
                         onClick={() => addAlbumToQueue(viewAlbum)}
                     >
-                       <Plus className="mr-2 h-4 w-4" />
-                       Add to Queue
+                       <Plus className="mr-1.5 h-4 w-4" />
+                       <span className="hidden xs:inline">Add to </span>Queue
                    </Button>
                </div>
            </div>
@@ -117,10 +117,10 @@ export function FocusView() {
                </div>
            )}
 
-           <div className="space-y-4">
+           <div className="space-y-3 md:space-y-4">
                <div>
-                   <h1 className="text-2xl font-bold leading-tight">{viewAlbum.title}</h1>
-                   <h2 className="text-xl text-muted-foreground">{viewAlbum.artist}</h2>
+                   <h1 className="text-xl md:text-2xl font-bold leading-tight">{viewAlbum.title}</h1>
+                   <h2 className="text-lg md:text-xl text-muted-foreground">{viewAlbum.artist}</h2>
                </div>
 
                {/* Genres & Styles */}
@@ -226,8 +226,8 @@ export function FocusView() {
 
        {/* Right Panel: Content */}
        <div className="flex-1 bg-muted/10 flex flex-col h-full overflow-hidden">
-            <ScrollArea className="flex-1 p-6">
-                <div className="max-w-3xl mx-auto space-y-8">
+            <ScrollArea className="flex-1 p-6 pb-safe">
+                <div className="max-w-3xl mx-auto space-y-8 pb-4">
                     
                     {/* Tracks Section */}
                     <div>

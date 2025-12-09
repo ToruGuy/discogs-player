@@ -39,9 +39,9 @@ export function LikedView() {
   } = useAlbumFilters(likedAlbums, 'bag-filters');
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight mb-4">The Bag</h1>
+    <div className="h-full flex flex-col">
+      <div className="shrink-0 px-3 md:px-6 pt-4 pb-2 border-b bg-background/80 backdrop-blur-md">
+        <h1 className="text-xl md:text-2xl font-bold tracking-tight mb-3">The Bag</h1>
         
         <FilterBar
           filters={filters}
@@ -66,11 +66,13 @@ export function LikedView() {
         />
       </div>
 
-      <AlbumGrid 
-        albums={filteredAlbums} 
-        isLoading={isLoading} 
-        emptyMessage="Your bag is empty. Go dig some records!" 
-      />
+      <div className="flex-1 min-h-0 px-3 pt-3 md:px-6 md:pt-6">
+        <AlbumGrid 
+          albums={filteredAlbums} 
+          isLoading={isLoading} 
+          emptyMessage="Your bag is empty. Go dig some records!" 
+        />
+      </div>
     </div>
   );
 }
