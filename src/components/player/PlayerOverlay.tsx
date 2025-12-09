@@ -87,11 +87,11 @@ export function PlayerOverlay() {
       >
         <div className="flex flex-col h-[600px] max-h-[80vh]">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b">
-              <div className="flex items-center gap-4">
-              <h2 className="text-lg font-semibold">Now Playing</h2>
+          <div className="flex items-center justify-between px-4 pb-4 border-b pt-safe md:pt-4">
+              <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
+              <h2 className="text-base md:text-lg font-semibold shrink-0">Now Playing</h2>
               {currentAlbum && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
                   <span className="truncate max-w-[200px]">{currentAlbum.artist}</span>
                   <span>•</span>
                   <span className="truncate max-w-[200px]">{currentAlbum.title}</span>
@@ -103,7 +103,7 @@ export function PlayerOverlay() {
                 <kbd className="px-2 py-1 bg-muted rounded border">Space</kbd>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 md:gap-2 shrink-0">
               {/* Feedback Controls */}
               <div className="flex items-center gap-1 mr-2">
                 <Button 
@@ -171,7 +171,7 @@ export function PlayerOverlay() {
                   variant="ghost"
                   size="sm"
                   onClick={clearQueue}
-                  className="text-muted-foreground hover:text-destructive"
+                  className="text-muted-foreground hover:text-destructive hidden sm:flex"
                 >
                   Clear Queue
                 </Button>
