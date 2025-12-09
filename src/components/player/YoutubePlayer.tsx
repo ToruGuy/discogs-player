@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { usePlayer } from '@/context/PlayerContext';
 import { useData } from '@/context/DataContext';
+import { toast } from 'sonner';
 
 const SIDECAR_URL = 'http://localhost:4567';
 
@@ -103,6 +104,50 @@ export function YoutubePlayer() {
                         updateVideoTitle(currentQueueItem.albumId, currentVideo.youtube_video_id, title);
                     }
                 }
+            }
+            break;
+
+        case 'ERROR':
+            const errorCode = data;
+            // console.error("YouTube Player Error:", errorCode);
+            
+            let errorMessage = "Video unavailable";
+            let shouldSkip = false;
+
+            switch (errorCode) {
+                case 100:
+                    errorMessage = "Video not found";
+                    shouldSkip = true;
+                    break;
+                case 101:
+                case 150:
+                    errorMessage = "Playback not allowed in embedded player";
+                    shouldSkip = true;
+                    break;
+                case 2:
+                    errorMessage = "Invalid video parameter";
+                    shouldSkip = true;
+                    break;
+                case 5:
+                    errorMessage = "HTML5 Player Error";
+                    shouldSkip = true; 
+                    break;
+                default:
+                    errorMessage = `Unknown error (${errorCode})`;
+                    shouldSkip = false;
+            }
+
+            if (shouldSkip) {
+                toast.error(`Error: ${errorMessage}`, {
+                    description: "Skipping to next track..."
+                });
+                
+                // Short delay to avoid rapid skipping loops
+                setTimeout(() => {
+                    nextTrack();
+                }, 1000);
+            } else {
+                 toast.error(`Playback Error: ${errorMessage}`);
             }
             break;
       }

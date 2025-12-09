@@ -3,6 +3,7 @@ import type { Album, QueueItem, YoutubeVideo } from '@/types';
 import { convertAlbumToQueueItems, convertTrackToQueueItem } from '@/lib/queue-helpers';
 import { useData } from './DataContext';
 import { useAudio } from './AudioContext';
+import { toast } from 'sonner';
 
 interface QueueContextType {
   queue: QueueItem[];
@@ -147,20 +148,45 @@ export function QueueProvider({ children }: { children: React.ReactNode }) {
 
   const playAlbum = useCallback((album: Album) => {
     const items = convertAlbumToQueueItems(album);
+    if (items.length === 0) {
+      toast.error('No tracks available', {
+        description: 'This album has no associated videos.'
+      });
+      return;
+    }
     playNow(items);
   }, [playNow]);
 
   const playAlbumNext = useCallback((album: Album) => {
     const items = convertAlbumToQueueItems(album);
-    if (items.length === 0) return;
+    if (items.length === 0) {
+      toast.error('No tracks available', {
+        description: 'This album has no associated videos.'
+      });
+      return;
+    }
 
     const insertIndex = queueIndex + 1;
     setQueue(prev => insertAt(prev, insertIndex, items));
+    
+    toast.success('Added to Queue', {
+      description: `${items.length} tracks added next.`
+    });
   }, [queueIndex]);
 
   const addAlbumToQueue = useCallback((album: Album) => {
     const items = convertAlbumToQueueItems(album);
+    if (items.length === 0) {
+      toast.error('No tracks available', {
+        description: 'This album has no associated videos.'
+      });
+      return;
+    }
     addToQueue(items);
+    
+    toast.success('Added to Queue', {
+      description: `${items.length} tracks added to end of queue.`
+    });
   }, [addToQueue]);
 
   const jumpToQueueIndex = useCallback((index: number) => {
@@ -172,31 +198,37 @@ export function QueueProvider({ children }: { children: React.ReactNode }) {
   const nextTrack = useCallback(() => {
     if (queue.length === 0) return;
 
-    // Normal case
+    // Normal case: move to next track in queue
     if (queueIndex + 1 < queue.length) {
       setActiveItemId(queue[queueIndex + 1].id);
       setIsPlaying(true);
       return;
     }
 
-    // Auto-play logic (Collection)
+    // End of queue - try auto-play next album(s)
+    // Keep searching until we find an album with videos
     const lastItem = queue[queue.length - 1];
     const currentAlbumIndex = albums.findIndex(a => a.id === lastItem.albumId);
 
-    if (currentAlbumIndex !== -1 && currentAlbumIndex + 1 < albums.length) {
-      const nextAlbum = albums[currentAlbumIndex + 1];
-      const nextItems = convertAlbumToQueueItems(nextAlbum);
-      
-      if (nextItems.length > 0) {
-        setQueue(prev => [...prev, ...nextItems]);
-        setActiveItemId(nextItems[0].id);
-        setIsPlaying(true);
-        return;
+    if (currentAlbumIndex !== -1) {
+      // Search through remaining albums to find one with videos
+      for (let i = currentAlbumIndex + 1; i < albums.length; i++) {
+        const nextAlbum = albums[i];
+        const nextItems = convertAlbumToQueueItems(nextAlbum);
+        
+        if (nextItems.length > 0) {
+          setQueue(prev => [...prev, ...nextItems]);
+          setActiveItemId(nextItems[0].id);
+          setIsPlaying(true);
+          return;
+        }
+        // Album has no videos, skip it and try the next one
       }
     }
 
-    // End of line
+    // No more albums with videos
     setIsPlaying(false);
+    toast.info('End of playable albums');
   }, [queue, queueIndex, albums, setIsPlaying]);
 
   const prevTrack = useCallback(() => {
