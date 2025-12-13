@@ -1,0 +1,12 @@
+{
+    "mcpServers": {
+      "sqlite-discogs": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@executeautomation/database-server",
+          "/Users/tako/GitRepos/discogs-player/src-tauri/discogs.db"
+        ]
+      }
+    }
+  }
