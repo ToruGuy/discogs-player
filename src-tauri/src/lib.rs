@@ -201,12 +201,28 @@ pub fn run() {
           kind: MigrationKind::Up,
       },
       Migration {
-          version: 3,
-          description: "add_item_url_to_collection_items",
-          sql: "
-            ALTER TABLE collection_items ADD COLUMN item_url TEXT;
-          ",
-          kind: MigrationKind::Up,
+        version: 3,
+        description: "create_settings_table",
+        sql: "
+          CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          );
+        ",
+        kind: MigrationKind::Up,
+      },
+      Migration {
+        version: 4,
+        description: "add_discogs_seller_id_to_sellers",
+        sql: "
+          -- Add discogs_seller_id column without UNIQUE constraint first
+          ALTER TABLE sellers ADD COLUMN discogs_seller_id INTEGER;
+          
+          -- Create unique index for constraint and faster lookups
+          CREATE UNIQUE INDEX idx_sellers_discogs_id ON sellers(discogs_seller_id);
+        ",
+        kind: MigrationKind::Up,
       },
   ];
 
@@ -224,7 +240,9 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       test_ipc_ping,
       commands::scraper_commands::start_scrape,
-      commands::scraper_commands::cancel_scrape
+      commands::scraper_commands::cancel_scrape,
+      commands::settings_commands::get_discogs_token,
+      commands::settings_commands::set_discogs_token
     ])
     .setup(|app| {
       // Start the Sidecar Player Server

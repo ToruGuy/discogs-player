@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, AlertCircle, X } from "lucide-react";
+import { useScraper } from "@/hooks/useScraper";
+import { useData } from "@/context/DataContext";
 
 interface ImportDialogProps {
   trigger?: React.ReactNode;
@@ -15,42 +17,70 @@ interface ImportDialogProps {
 export function ImportDialog({ trigger }: ImportDialogProps) {
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState("");
-  const [status, setStatus] = useState<"idle" | "validating" | "scraping" | "complete" | "error">("idle");
-  const [progress, setProgress] = useState(0);
-  const [collectionName, setCollectionName] = useState("");
-  const [stats, setStats] = useState({ success: 0, skipped: 0, errors: 0 });
+  const [sellerName, setSellerName] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const { jobState, startScrapeFromUrl, cancelScrape, resetJobState, extractSellerFromUrl } = useScraper();
+  const { refresh } = useData();
 
-  const handleValidate = async () => {
-    setStatus("validating");
-    // Simulate validation
-    setTimeout(() => {
-      if (url.includes("discogs.com")) {
-        setCollectionName("Hard Wax Berlin");
-        setStatus("idle");
-      } else {
-        setStatus("error");
+  // Reset state when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setUrl("");
+      setSellerName(null);
+      setValidationError(null);
+      if (!jobState.isRunning) {
+        resetJobState();
       }
-    }, 1000);
+    }
+  }, [open, jobState.isRunning, resetJobState]);
+
+  // Refresh data when scrape completes
+  useEffect(() => {
+    if (jobState.result && !jobState.isRunning) {
+      refresh();
+    }
+  }, [jobState.result, jobState.isRunning, refresh]);
+
+  const handleValidate = () => {
+    setValidationError(null);
+    const seller = extractSellerFromUrl(url);
+    if (seller) {
+      setSellerName(seller);
+    } else {
+      setValidationError("Invalid Discogs URL. Please provide a seller profile or collection URL.");
+      setSellerName(null);
+    }
   };
 
   const handleStartImport = async () => {
-    setStatus("scraping");
-    setProgress(0);
-    setStats({ success: 0, skipped: 0, errors: 0 });
-
-    // Simulate scraping progress
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setStatus("complete");
-          setStats({ success: 142, skipped: 8, errors: 2 });
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 500);
+    if (!sellerName) return;
+    
+    try {
+      await startScrapeFromUrl(url);
+    } catch (error) {
+      // Error is already handled by the hook (toast + state)
+      console.error("Failed to start scrape:", error);
+    }
   };
+
+  const handleCancel = async () => {
+    if (jobState.isRunning) {
+      await cancelScrape();
+    }
+    setOpen(false);
+  };
+
+  const progressPercent = jobState.progress
+    ? Math.round((jobState.progress.current / jobState.progress.total) * 100)
+    : 0;
+
+  const status = jobState.isRunning
+    ? "scraping"
+    : jobState.result
+    ? "complete"
+    : jobState.error
+    ? "error"
+    : "idle";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -91,27 +121,44 @@ export function ImportDialog({ trigger }: ImportDialogProps) {
           </div>
 
           {/* Collection Info */}
-          {collectionName && status !== "error" && (
+          {sellerName && status !== "error" && !validationError && (
             <div className="p-4 border rounded-lg bg-muted/50">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="font-semibold">{collectionName}</div>
-                  <div className="text-sm text-muted-foreground">~12,403 items available</div>
+                  <div className="font-semibold">{sellerName}</div>
+                  {jobState.progress && (
+                    <div className="text-sm text-muted-foreground">
+                      {jobState.progress.total} items found
+                    </div>
+                  )}
                 </div>
-                <Badge variant="secondary">Shop</Badge>
+                <Badge variant="secondary">Seller</Badge>
               </div>
             </div>
           )}
 
-          {/* Error State */}
-          {status === "error" && (
+          {/* Validation Error */}
+          {validationError && (
             <div className="p-4 border border-destructive rounded-lg bg-destructive/10">
               <div className="flex items-center gap-2 text-destructive">
                 <XCircle className="h-4 w-4" />
                 <span className="font-medium">Invalid URL</span>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                Please enter a valid Discogs seller or collection URL.
+                {validationError}
+              </p>
+            </div>
+          )}
+
+          {/* Scraper Error */}
+          {jobState.error && status === "error" && (
+            <div className="p-4 border border-destructive rounded-lg bg-destructive/10">
+              <div className="flex items-center gap-2 text-destructive">
+                <XCircle className="h-4 w-4" />
+                <span className="font-medium">Scrape Failed</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                {jobState.error}
               </p>
             </div>
           )}
@@ -123,55 +170,77 @@ export function ImportDialog({ trigger }: ImportDialogProps) {
               
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">Syncing...</span>
-                  <span className="text-muted-foreground">{progress}%</span>
+                  <span className="font-medium">
+                    {jobState.progress?.phase === "inventory" ? "Fetching inventory..." : "Enriching releases..."}
+                  </span>
+                  <span className="text-muted-foreground">{progressPercent}%</span>
                 </div>
-                <Progress value={progress} className="h-2" />
+                <Progress value={progressPercent} className="h-2" />
+                {jobState.progress && (
+                  <div className="text-xs text-muted-foreground text-center">
+                    {jobState.progress.current} / {jobState.progress.total} items
+                  </div>
+                )}
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-3 gap-4 p-4 border rounded-lg bg-muted/30">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-500">{stats.success}</div>
-                  <div className="text-xs text-muted-foreground">Success</div>
+              {jobState.result && (
+                <div className="grid grid-cols-3 gap-4 p-4 border rounded-lg bg-muted/30">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-500">{jobState.result.albums_added}</div>
+                    <div className="text-xs text-muted-foreground">Added</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-500">{jobState.result.albums_updated}</div>
+                    <div className="text-xs text-muted-foreground">Updated</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-muted-foreground">{jobState.result.total_items}</div>
+                    <div className="text-xs text-muted-foreground">Total</div>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-muted-foreground">{stats.skipped}</div>
-                  <div className="text-xs text-muted-foreground">Skipped</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-destructive">{stats.errors}</div>
-                  <div className="text-xs text-muted-foreground">Errors</div>
-                </div>
-              </div>
+              )}
 
               {/* Log Console */}
-              <ScrollArea className="h-[150px] w-full rounded border bg-black/90 p-3">
-                <div className="space-y-1 font-mono text-xs text-green-400">
-                  <div>[00:12] Connecting to Discogs...</div>
-                  <div>[00:13] Fetching collection metadata...</div>
-                  <div>[00:15] Found 142 items</div>
-                  <div>[00:16] Scraping item 1/142...</div>
-                  <div>[00:17] Scraping item 2/142...</div>
-                  <div className="text-yellow-400">[00:18] Warning: No audio found for item 15</div>
-                  <div>[00:19] Scraping item 3/142...</div>
-                  {status === "complete" && (
-                    <div className="text-green-500 font-bold">[00:45] ✓ Import complete!</div>
-                  )}
-                </div>
-              </ScrollArea>
+              {jobState.logs.length > 0 && (
+                <ScrollArea className="h-[150px] w-full rounded border bg-black/90 p-3">
+                  <div className="space-y-1 font-mono text-xs">
+                    {jobState.logs.map((log, idx) => {
+                      const isError = log.includes("Error") || log.includes("Failed");
+                      const isWarning = log.includes("⚠️");
+                      const isSuccess = log.includes("✅") || log.includes("Completed");
+                      return (
+                        <div
+                          key={idx}
+                          className={
+                            isError
+                              ? "text-red-400"
+                              : isWarning
+                              ? "text-yellow-400"
+                              : isSuccess
+                              ? "text-green-500 font-bold"
+                              : "text-green-400"
+                          }
+                        >
+                          {log}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              )}
             </div>
           )}
 
           {/* Complete State */}
-          {status === "complete" && (
+          {status === "complete" && jobState.result && (
             <div className="p-4 border border-green-500 rounded-lg bg-green-500/10">
               <div className="flex items-center gap-2 text-green-500">
                 <CheckCircle2 className="h-4 w-4" />
                 <span className="font-medium">Import Complete!</span>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                Successfully added {stats.success} items from {collectionName}
+                Successfully added {jobState.result.albums_added} albums and updated {jobState.result.albums_updated} albums from {sellerName}
               </p>
             </div>
           )}
@@ -184,22 +253,31 @@ export function ImportDialog({ trigger }: ImportDialogProps) {
             </Button>
           ) : (
             <>
-              <Button variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleStartImport}
-                disabled={!collectionName || status === "scraping"}
-              >
-                {status === "scraping" ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Importing...
-                  </>
-                ) : (
-                  "Start Import"
-                )}
-              </Button>
+              {jobState.isRunning ? (
+                <Button variant="destructive" onClick={handleCancel} className="w-full">
+                  <X className="mr-2 h-4 w-4" />
+                  Cancel Scrape
+                </Button>
+              ) : (
+                <>
+                  <Button variant="outline" onClick={() => setOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleStartImport}
+                    disabled={!sellerName || status === "scraping"}
+                  >
+                    {status === "scraping" ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      "Start Import"
+                    )}
+                  </Button>
+                </>
+              )}
             </>
           )}
         </DialogFooter>

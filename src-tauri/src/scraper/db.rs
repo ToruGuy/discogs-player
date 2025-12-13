@@ -2,6 +2,7 @@ use crate::scraper::types::{ReleaseResponse, Listing};
 use crate::scraper::{Result, ScraperError};
 use tauri::{AppHandle, Manager};
 use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::Row;
 
 pub struct DatabaseWriter {
     app: AppHandle,
@@ -65,14 +66,52 @@ impl DatabaseWriter {
         .await
         .map_err(|e| ScraperError::DatabaseError(format!("Failed to save album: {}", e)))?;
 
-        self.save_collection_item(&pool, listing).await?;
+        // Save seller first to satisfy foreign key constraint
+        let seller_id = self.save_seller(&pool, &listing.seller).await?;
+        self.save_collection_item(&pool, listing, seller_id).await?;
 
         Ok(())
     }
 
-    async fn save_collection_item(&self, pool: &sqlx::SqlitePool, listing: &Listing) -> Result<()> {
+    async fn save_seller(&self, pool: &sqlx::SqlitePool, seller: &crate::scraper::types::Seller) -> Result<i64> {
+        let discogs_seller_id = seller.id as i64;
+        let username = &seller.username;
+        let uri = seller.resource_url.as_deref();
+        
+        // Insert or update seller (using runtime query to avoid compile-time schema validation)
+        sqlx::query(
+            r#"
+            INSERT INTO sellers (discogs_seller_id, name, uri)
+            VALUES (?1, ?2, ?3)
+            ON CONFLICT(discogs_seller_id) DO UPDATE SET
+                name = excluded.name,
+                uri = excluded.uri
+            "#
+        )
+        .bind(discogs_seller_id)
+        .bind(username)
+        .bind(uri)
+        .execute(pool)
+        .await
+        .map_err(|e| ScraperError::DatabaseError(format!("Failed to save seller: {}", e)))?;
+        
+        // Get the seller's internal ID (using runtime query)
+        let row = sqlx::query(
+            r#"SELECT id FROM sellers WHERE discogs_seller_id = ?1"#
+        )
+        .bind(discogs_seller_id)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| ScraperError::DatabaseError(format!("Failed to fetch seller ID: {}", e)))?;
+        
+        let seller_id: i64 = row.try_get("id")
+            .map_err(|e| ScraperError::DatabaseError(format!("Failed to get seller ID from row: {}", e)))?;
+        
+        Ok(seller_id)
+    }
+
+    async fn save_collection_item(&self, pool: &sqlx::SqlitePool, listing: &Listing, seller_id: i64) -> Result<()> {
         let release_id_str = listing.release.id.to_string();
-        let seller_id = listing.seller.id as i64;
         let condition = listing.condition.as_deref();
         let sleeve_condition = listing.sleeve_condition.as_deref();
         let comments = listing.comments.as_deref();

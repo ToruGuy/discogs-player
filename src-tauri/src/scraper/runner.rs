@@ -4,7 +4,7 @@ use crate::scraper::release::fetch_release;
 use crate::scraper::{Result, ScraperError};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use tauri::Emitter;
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -21,11 +21,63 @@ pub struct ScrapeJob {
     app: AppHandle,
 }
 
+async fn get_discogs_token_from_db(app: &AppHandle) -> Result<String> {
+    // Try to get token from settings first using the SQL plugin
+    // The plugin provides access via app.state() but we need to use it differently
+    // For now, let's use sqlx to query the same database
+    use sqlx::sqlite::SqlitePoolOptions;
+    
+    let app_data_dir = app.path()
+        .app_data_dir()
+        .map_err(|e| ScraperError::DatabaseError(format!("Failed to get app data dir: {}", e)))?;
+    let db_path = app_data_dir.join("discogs.db");
+    
+    let pool = SqlitePoolOptions::new()
+        .connect_with(
+            sqlx::sqlite::SqliteConnectOptions::new()
+                .filename(&db_path)
+                .create_if_missing(true),
+        )
+        .await
+        .map_err(|e| ScraperError::DatabaseError(format!("Failed to connect to database: {}", e)))?;
+    
+    let result = sqlx::query_as::<_, (String,)>(
+        "SELECT value FROM settings WHERE key = ?"
+    )
+    .bind("discogs_token")
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| ScraperError::DatabaseError(format!("Failed to query settings: {}", e)))?;
+    
+    if let Some((token,)) = result {
+        if !token.is_empty() {
+            return Ok(token);
+        }
+    }
+    
+    // Fallback to .env for testing (development only)
+    #[cfg(debug_assertions)]
+    {
+        use std::env;
+        use dotenvy;
+        dotenvy::dotenv().ok();
+        if let Ok(token) = env::var("DISCOGS_TOKEN") {
+            log::warn!("Using DISCOGS_TOKEN from .env (testing only)");
+            return Ok(token);
+        }
+    }
+    
+    Err(ScraperError::MissingToken)
+}
+
 impl ScrapeJob {
-    pub fn new(app: AppHandle) -> Result<Self> {
+    pub async fn new(app: AppHandle) -> Result<Self> {
+        // Get token from settings
+        let token = get_discogs_token_from_db(&app).await?;
+        
         Ok(Self {
             cancelled: Arc::new(AtomicBool::new(false)),
-            client: DiscogsClient::new()?,
+            client: DiscogsClient::new(token)?,
             db: DatabaseWriter::new(app.clone()),
             app,
         })

@@ -1,7 +1,6 @@
 use crate::scraper::runner::{ScrapeJob, ScrapeResult};
-use crate::scraper::ScraperError;
 use std::sync::{Arc, Mutex};
-use tauri::{command, AppHandle, Manager, State};
+use tauri::{command, AppHandle, State};
 
 type JobState = Arc<Mutex<Option<Arc<ScrapeJob>>>>;
 
@@ -14,7 +13,7 @@ pub async fn start_scrape(
     state: State<'_, JobState>,
 ) -> Result<ScrapeResult, String> {
     // Create new job
-    let job = Arc::new(ScrapeJob::new(app.clone()).map_err(|e| e.to_string())?);
+    let job = Arc::new(ScrapeJob::new(app.clone()).await.map_err(|e| e.to_string())?);
 
     // Store job in state
     *state.lock().unwrap() = Some(job.clone());

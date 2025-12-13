@@ -12,13 +12,14 @@ async fn main() -> Result<()> {
     // Get seller username from command line args
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
-        eprintln!("Usage: cargo run --bin test_scraper <seller_username> [limit]");
-        eprintln!("Example: cargo run --bin test_scraper secretspot-records 10");
+        eprintln!("Usage: cargo run --bin test_scraper <seller_username> <token> [limit]");
+        eprintln!("Example: cargo run --bin test_scraper secretspot-records YOUR_TOKEN 10");
         std::process::exit(1);
     }
 
     let seller = &args[1];
-    let limit = args.get(2).and_then(|s| s.parse::<u32>().ok());
+    let token = args.get(2).expect("Token is required").to_string();
+    let limit = args.get(3).and_then(|s| s.parse::<u32>().ok());
 
     println!("🚀 Starting scraper test for seller: {}", seller);
     if let Some(limit) = limit {
@@ -27,7 +28,7 @@ async fn main() -> Result<()> {
 
     // Test 1: Create client
     println!("\n✅ Test 1: Creating Discogs client...");
-    let client = DiscogsClient::new()?;
+    let client = DiscogsClient::new(token)?;
     println!("   ✓ Client created successfully");
 
     // Test 2: Fetch inventory (first page only for quick test)

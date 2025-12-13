@@ -1,5 +1,4 @@
-use crate::scraper::{DiscogsClient, Result, ScraperError};
-use crate::scraper::types::InventoryResponse;
+use crate::scraper::{DiscogsClient, Result};
 
 pub async fn fetch_all_inventory(
     client: &DiscogsClient,

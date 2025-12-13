@@ -1,5 +1,6 @@
 use crate::scraper::rate_limiter::{create_limiter, AppRateLimiter};
 use crate::scraper::{InventoryResponse, ReleaseResponse, Result, ScraperError};
+#[cfg(test)]
 use std::env;
 use std::sync::Arc;
 
@@ -13,14 +14,12 @@ pub struct DiscogsClient {
 }
 
 impl DiscogsClient {
-    pub fn new() -> Result<Self> {
-        // Try loading .env from current directory first, then parent directory
-        dotenvy::dotenv().ok();
-        dotenvy::from_path("../.env").ok();
-        dotenvy::from_path("../../.env").ok();
-        
-        let token = env::var("DISCOGS_TOKEN")
-            .map_err(|_| ScraperError::MissingToken)?;
+    /// Create a new DiscogsClient with a token.
+    /// For testing, token can be read from .env, but in production it should come from user settings.
+    pub fn new(token: String) -> Result<Self> {
+        if token.is_empty() {
+            return Err(ScraperError::MissingToken);
+        }
 
         let client = reqwest::Client::builder()
             .user_agent(USER_AGENT)
@@ -32,6 +31,20 @@ impl DiscogsClient {
             token,
             rate_limiter: Arc::new(create_limiter()),
         })
+    }
+
+    /// Create a new DiscogsClient from environment variable (for testing only)
+    #[cfg(test)]
+    pub fn from_env() -> Result<Self> {
+        // Try loading .env from current directory first, then parent directory
+        dotenvy::dotenv().ok();
+        dotenvy::from_path("../.env").ok();
+        dotenvy::from_path("../../.env").ok();
+        
+        let token = env::var("DISCOGS_TOKEN")
+            .map_err(|_| ScraperError::MissingToken)?;
+        
+        Self::new(token)
     }
 
     fn build_request(&self, url: &str) -> reqwest::RequestBuilder {
