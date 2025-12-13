@@ -72,3 +72,15 @@ export type QueueItem = {
   totalTracksInAlbum: number;  // Total number of tracks in the source album
   source: 'album' | 'playlist' | 'manual';
 };
+
+export type ScrapeJob = {
+  id: string;
+  seller: string;
+  status: 'running' | 'completed' | 'error' | 'cancelled';
+  albums_added: number;
+  albums_updated: number;
+  total_items: number;
+  error_message: string | null;
+  started_at: string;
+  completed_at: string | null;
+};

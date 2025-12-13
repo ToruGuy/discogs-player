@@ -35,6 +35,7 @@ url = "2.5"
 thiserror = "1.0"
 sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio-rustls"] }
 env_logger = "0.11"
+chrono = "0.4"
 
 [[bin]]
 name = "test_scraper"

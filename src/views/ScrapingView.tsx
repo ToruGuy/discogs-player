@@ -13,9 +13,27 @@ import { RefreshCw, AlertCircle, CheckCircle2, PlayCircle, Loader2 } from "lucid
 import { useScraper } from "@/hooks/useScraper";
 import { ImportDialog } from "@/components/ImportDialog";
 import { formatDistanceToNow } from "date-fns";
+import { useEffect, useState } from "react";
+import { dbService } from "@/services/db";
+import type { ScrapeJob } from "@/types";
 
 export function ScrapingView() {
   const { jobState } = useScraper();
+  const [scrapeHistory, setScrapeHistory] = useState<ScrapeJob[]>([]);
+
+  // Load scrape history from database
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const jobs = await dbService.getScrapeJobs();
+        setScrapeHistory(jobs);
+      } catch (error) {
+        console.error("Failed to load scrape history:", error);
+      }
+    };
+    
+    loadHistory();
+  }, [jobState.result]); // Reload when a job completes
 
   const currentJob = jobState.isRunning || jobState.result
     ? {
@@ -144,8 +162,8 @@ export function ScrapingView() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentJob ? (
-                <TableRow>
+              {currentJob && (
+                <TableRow key={currentJob.id}>
                   <TableCell>
                     {currentJob.status === "running" && (
                       <Badge variant="outline" className="border-blue-500 text-blue-500 gap-1">
@@ -187,7 +205,55 @@ export function ScrapingView() {
                     )}
                   </TableCell>
                 </TableRow>
-              ) : (
+              )}
+              {scrapeHistory.map((job) => (
+                <TableRow key={job.id}>
+                  <TableCell>
+                    {job.status === "running" && (
+                      <Badge variant="outline" className="border-blue-500 text-blue-500 gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Running
+                      </Badge>
+                    )}
+                    {job.status === "completed" && (
+                      <Badge variant="outline" className="border-green-500 text-green-500 gap-1">
+                        <CheckCircle2 className="h-3 w-3" /> Success
+                      </Badge>
+                    )}
+                    {job.status === "error" && (
+                      <Badge variant="outline" className="border-red-500 text-red-500 gap-1">
+                        <AlertCircle className="h-3 w-3" /> Failed
+                      </Badge>
+                    )}
+                    {job.status === "cancelled" && (
+                      <Badge variant="outline" className="border-gray-500 text-gray-500 gap-1">
+                        <AlertCircle className="h-3 w-3" /> Cancelled
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="font-medium">{job.seller}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {formatDistanceToNow(new Date(job.started_at), { addSuffix: true })}
+                  </TableCell>
+                  <TableCell>
+                    {job.total_items}{" "}
+                    {job.error_message && (
+                      <span className="text-muted-foreground text-xs ml-1">(error)</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {job.status === "completed" && (
+                      <ImportDialog
+                        trigger={
+                          <Button variant="ghost" size="sm" className="gap-2 hover:text-primary">
+                            <RefreshCw className="h-3 w-3" /> Rescrape
+                          </Button>
+                        }
+                      />
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {!currentJob && scrapeHistory.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                     No scraping jobs yet. Start a new sync to see history here.

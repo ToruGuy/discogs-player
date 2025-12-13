@@ -15,6 +15,7 @@ pub struct ScrapeResult {
 }
 
 pub struct ScrapeJob {
+    job_id: String,
     cancelled: Arc<AtomicBool>,
     client: DiscogsClient,
     db: DatabaseWriter,
@@ -75,7 +76,11 @@ impl ScrapeJob {
         // Get token from settings
         let token = get_discogs_token_from_db(&app).await?;
         
+        // Generate unique job ID
+        let job_id = format!("job_{}", chrono::Utc::now().timestamp_millis());
+        
         Ok(Self {
+            job_id,
             cancelled: Arc::new(AtomicBool::new(false)),
             client: DiscogsClient::new(token)?,
             db: DatabaseWriter::new(app.clone()),
@@ -85,6 +90,10 @@ impl ScrapeJob {
 
     pub fn cancel(&self) {
         self.cancelled.store(true, Ordering::Relaxed);
+    }
+
+    pub fn job_id(&self) -> &str {
+        &self.job_id
     }
 
     fn check_cancelled(&self) -> Result<()> {
@@ -99,11 +108,17 @@ impl ScrapeJob {
         let batch_size = batch_size.unwrap_or(10); // Default to 10 for testing
         log::info!("Starting scrape for seller: {}, limit: {:?}, batch_size: {}", seller, limit, batch_size);
         
+        // Save job to database
+        if let Err(e) = self.db.create_scrape_job(&self.job_id, &seller).await {
+            log::warn!("Failed to save scrape job to database: {}", e);
+        }
+        
         // Phase 1: Fetch and save inventory
         self.app
             .emit("scraper:started", serde_json::json!({
                 "seller": seller,
-                "limit": limit
+                "limit": limit,
+                "job_id": self.job_id
             }))
             .ok();
 
@@ -283,6 +298,16 @@ impl ScrapeJob {
 
         log::info!("Scrape completed: added={}, updated={}, total={}", 
             albums_added, albums_updated, total_items);
+
+        // Update job as completed in database
+        if let Err(e) = self.db.update_scrape_job_completed(
+            &self.job_id,
+            albums_added,
+            albums_updated,
+            total_items,
+        ).await {
+            log::warn!("Failed to update scrape job in database: {}", e);
+        }
 
         self.app
             .emit("scraper:completed", serde_json::json!(result))

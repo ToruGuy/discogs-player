@@ -406,4 +406,98 @@ impl DatabaseWriter {
 
         Ok(result > 0)
     }
+
+    // Scrape Job Management
+    pub async fn create_scrape_job(&self, job_id: &str, seller: &str) -> Result<()> {
+        let pool = self.get_pool().await?;
+        
+        sqlx::query(
+            r#"
+            INSERT INTO scrape_jobs (id, seller, status, started_at)
+            VALUES (?1, ?2, 'running', CURRENT_TIMESTAMP)
+            "#,
+        )
+        .bind(job_id)
+        .bind(seller)
+        .execute(&pool)
+        .await
+        .map_err(|e| ScraperError::DatabaseError(format!("Failed to create scrape job: {}", e)))?;
+
+        Ok(())
+    }
+
+    pub async fn update_scrape_job_completed(
+        &self,
+        job_id: &str,
+        albums_added: u32,
+        albums_updated: u32,
+        total_items: u32,
+    ) -> Result<()> {
+        let pool = self.get_pool().await?;
+        
+        let albums_added_i64 = albums_added as i64;
+        let albums_updated_i64 = albums_updated as i64;
+        let total_items_i64 = total_items as i64;
+        
+        sqlx::query(
+            r#"
+            UPDATE scrape_jobs SET
+                status = 'completed',
+                albums_added = ?1,
+                albums_updated = ?2,
+                total_items = ?3,
+                completed_at = CURRENT_TIMESTAMP
+            WHERE id = ?4
+            "#,
+        )
+        .bind(albums_added_i64)
+        .bind(albums_updated_i64)
+        .bind(total_items_i64)
+        .bind(job_id)
+        .execute(&pool)
+        .await
+        .map_err(|e| ScraperError::DatabaseError(format!("Failed to update scrape job: {}", e)))?;
+
+        Ok(())
+    }
+
+    pub async fn update_scrape_job_error(&self, job_id: &str, error_message: &str) -> Result<()> {
+        let pool = self.get_pool().await?;
+        
+        sqlx::query(
+            r#"
+            UPDATE scrape_jobs SET
+                status = 'error',
+                error_message = ?1,
+                completed_at = CURRENT_TIMESTAMP
+            WHERE id = ?2
+            "#,
+        )
+        .bind(error_message)
+        .bind(job_id)
+        .execute(&pool)
+        .await
+        .map_err(|e| ScraperError::DatabaseError(format!("Failed to update scrape job error: {}", e)))?;
+
+        Ok(())
+    }
+
+    pub async fn update_scrape_job_cancelled(&self, job_id: &str) -> Result<()> {
+        let pool = self.get_pool().await?;
+        
+        sqlx::query(
+            r#"
+            UPDATE scrape_jobs SET
+                status = 'cancelled',
+                completed_at = CURRENT_TIMESTAMP
+            WHERE id = ?1
+            "#,
+        )
+        .bind(job_id)
+        .execute(&pool)
+        .await
+        .map_err(|e| ScraperError::DatabaseError(format!("Failed to update scrape job cancelled: {}", e)))?;
+
+        Ok(())
+    }
 }

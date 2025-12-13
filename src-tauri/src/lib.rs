@@ -224,6 +224,28 @@ pub fn run() {
         ",
         kind: MigrationKind::Up,
       },
+      Migration {
+        version: 5,
+        description: "create_scrape_jobs_table",
+        sql: "
+          CREATE TABLE IF NOT EXISTS scrape_jobs (
+            id TEXT PRIMARY KEY,
+            seller TEXT NOT NULL,
+            status TEXT NOT NULL,
+            albums_added INTEGER DEFAULT 0,
+            albums_updated INTEGER DEFAULT 0,
+            total_items INTEGER DEFAULT 0,
+            error_message TEXT,
+            started_at DATETIME NOT NULL,
+            completed_at DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          -- Index for faster querying by date
+          CREATE INDEX idx_scrape_jobs_started_at ON scrape_jobs(started_at DESC);
+        ",
+        kind: MigrationKind::Up,
+      },
   ];
 
   // Job state for scraper

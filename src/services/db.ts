@@ -314,6 +314,24 @@ class DatabaseService {
     await db.execute('DELETE FROM user_interactions');
     await db.execute('DELETE FROM albums');
   }
+
+  // Scrape job history
+  async getScrapeJobs() {
+    const db = await this.connect();
+    const jobs = await db.select<any[]>('SELECT * FROM scrape_jobs ORDER BY started_at DESC');
+    
+    return jobs.map(job => ({
+      id: job.id,
+      seller: job.seller,
+      status: job.status,
+      albums_added: job.albums_added || 0,
+      albums_updated: job.albums_updated || 0,
+      total_items: job.total_items || 0,
+      error_message: job.error_message || null,
+      started_at: job.started_at,
+      completed_at: job.completed_at || null,
+    }));
+  }
 }
 
 export const dbService = new DatabaseService();
