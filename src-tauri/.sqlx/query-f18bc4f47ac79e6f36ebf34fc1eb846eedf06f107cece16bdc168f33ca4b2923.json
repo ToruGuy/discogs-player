@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR IGNORE INTO album_styles (album_id, style_id) VALUES (?1, ?2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "f18bc4f47ac79e6f36ebf34fc1eb846eedf06f107cece16bdc168f33ca4b2923"
+}

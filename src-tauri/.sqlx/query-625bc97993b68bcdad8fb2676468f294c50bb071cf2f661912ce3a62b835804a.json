@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE albums SET\n                artist = ?1,\n                title = ?2,\n                label = ?3,\n                catalog_number = ?4,\n                format = ?5,\n                country = ?6,\n                released_year = ?7,\n                cover_image_url = ?8,\n                resource_url = ?9,\n                have_count = ?10,\n                want_count = ?11,\n                avg_rating = ?12,\n                ratings_count = ?13,\n                updated_at = CURRENT_TIMESTAMP\n            WHERE discogs_release_id = ?14\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 14
+    },
+    "nullable": []
+  },
+  "hash": "625bc97993b68bcdad8fb2676468f294c50bb071cf2f661912ce3a62b835804a"
+}

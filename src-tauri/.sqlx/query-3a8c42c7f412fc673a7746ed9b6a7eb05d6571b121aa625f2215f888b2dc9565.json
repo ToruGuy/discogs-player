@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR REPLACE INTO youtube_videos (id, title, url) VALUES (?1, ?2, ?3)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "3a8c42c7f412fc673a7746ed9b6a7eb05d6571b121aa625f2215f888b2dc9565"
+}

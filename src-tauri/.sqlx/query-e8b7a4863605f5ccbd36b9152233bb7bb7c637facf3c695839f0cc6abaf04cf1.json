@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT OR REPLACE INTO albums (\n                discogs_release_id, artist, title, label, catalog_number,\n                format, country, released_year, cover_image_url, resource_url,\n                updated_at\n            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, CURRENT_TIMESTAMP)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 10
+    },
+    "nullable": []
+  },
+  "hash": "e8b7a4863605f5ccbd36b9152233bb7bb7c637facf3c695839f0cc6abaf04cf1"
+}

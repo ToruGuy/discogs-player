@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO collection_items (\n                album_id, seller_id, price, currency, condition,\n                sleeve_condition, notes, is_available, item_url\n            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 9
+    },
+    "nullable": []
+  },
+  "hash": "e3850dda0fd0386365687f92460093a7cac4ab34c222aa34e5a3c20b97f5a5e6"
+}

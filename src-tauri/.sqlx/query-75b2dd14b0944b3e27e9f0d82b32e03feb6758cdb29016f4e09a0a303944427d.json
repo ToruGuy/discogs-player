@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR IGNORE INTO album_videos (album_id, video_id, order_index) VALUES (?1, ?2, ?3)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "75b2dd14b0944b3e27e9f0d82b32e03feb6758cdb29016f4e09a0a303944427d"
+}
