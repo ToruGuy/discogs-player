@@ -26,3 +26,15 @@ tauri-plugin-log = "2.0.0"
 tauri-plugin-opener = "2.0.0"
 tiny_http = "0.12"
 tauri-plugin-sql = { version = "2.3.1", features = ["sqlite"] }
+reqwest = { version = "0.11", features = ["json"] }
+governor = "0.6"
+tokio = { version = "1", features = ["full"] }
+dotenvy = "0.15"
+url = "2.5"
+thiserror = "1.0"
+sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio-rustls"] }
+env_logger = "0.11"
+
+[[bin]]
+name = "test_scraper"
+path = "src/bin/test_scraper.rs"

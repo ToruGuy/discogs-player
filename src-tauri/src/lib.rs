@@ -1,6 +1,11 @@
 mod player_server;
+pub mod scraper;
+mod commands;
+
 use tauri::command;
 use tauri_plugin_sql::{Migration, MigrationKind};
+use std::sync::{Arc, Mutex};
+use crate::scraper::runner::ScrapeJob;
 
 #[command]
 fn test_ipc_ping(payload: String) -> String {
@@ -110,6 +115,7 @@ pub fn run() {
               notes TEXT,
               is_available BOOLEAN,
               is_new INTEGER DEFAULT 0,
+              item_url TEXT,
               FOREIGN KEY (album_id) REFERENCES albums(discogs_release_id) ON DELETE CASCADE,
               FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE SET NULL
             );
@@ -204,6 +210,9 @@ pub fn run() {
       },
   ];
 
+  // Job state for scraper
+  let job_state: Arc<Mutex<Option<Arc<ScrapeJob>>>> = Arc::new(Mutex::new(None));
+
   tauri::Builder::default()
     .plugin(tauri_plugin_opener::init())
     .plugin(
@@ -211,7 +220,12 @@ pub fn run() {
         .add_migrations("sqlite:discogs.db", migrations)
         .build(),
     )
-    .invoke_handler(tauri::generate_handler![test_ipc_ping])
+    .manage(job_state.clone())
+    .invoke_handler(tauri::generate_handler![
+      test_ipc_ping,
+      commands::scraper_commands::start_scrape,
+      commands::scraper_commands::cancel_scrape
+    ])
     .setup(|app| {
       // Start the Sidecar Player Server
       player_server::start();
